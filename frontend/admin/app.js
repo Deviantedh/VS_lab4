@@ -204,6 +204,8 @@ function updateAuthUI() {
     roleBadgeEl.textContent = roleTitle;
   }
 
+  fetchUnreadNotificationsCount();
+
   // Ограничение: пользователей может создавать только супервайзер (ADMIN)
   if (addBtn) {
     if (role === 'ADMIN') {
@@ -867,9 +869,14 @@ async function loadRequests() {
 
     requests.forEach(req => {
       let datesStr = '—';
+      let fileAttachmentHtml = '';
       try {
         const data = JSON.parse(req.requestData);
         datesStr = `${data.dateFrom || ''} — ${data.dateTo || ''}`;
+        if (data.fileId) {
+          const fileName = escapeHtml(data.fileName || 'Документ');
+          fileAttachmentHtml = `<div style="margin-top: 6px;"><a href="${API_URL}/files/${data.fileId}/download" target="_blank" class="file-attachment-badge" title="Скачать прикрепленный файл">📎 ${fileName}</a></div>`;
+        }
       } catch (e) {
         datesStr = req.requestData;
       }
@@ -883,7 +890,10 @@ async function loadRequests() {
         <td><strong>#${req.id}</strong></td>
         <td><strong>${escapeHtml(req.employeeName)}</strong></td>
         <td><strong style="color: var(--text-dark);">${req.type}</strong></td>
-        <td>${datesStr}</td>
+        <td>
+          <div>${datesStr}</div>
+          ${fileAttachmentHtml}
+        </td>
         <td><span class="badge ${badgeClass}">${req.status}</span></td>
         <td>${escapeHtml(req.resolutionComment || '—')}</td>
         <td>
@@ -1768,8 +1778,129 @@ window.addEventListener('DOMContentLoaded', async () => {
   // Запуск
   await checkBackendStatus();
   await loadDashboardStats();
+  initNotificationsWidget();
   setInterval(checkBackendStatus, 10000);
 });
+
+// ================= Уведомления (Kafka Events via notification-service) =================
+let notificationsState = {
+  unreadCount: 0,
+  items: [],
+  isOpen: false
+};
+
+async function fetchUnreadNotificationsCount() {
+  if (!auth.token) return;
+  try {
+    const res = await authFetch(`${API_URL}/notifications/unread-count`).then(handleApiResponse);
+    const count = res.unreadCount || 0;
+    notificationsState.unreadCount = count;
+    const badge = document.getElementById('notification-badge');
+    if (badge) {
+      if (count > 0) {
+        badge.textContent = count > 99 ? '99+' : count;
+        badge.style.display = 'inline-block';
+      } else {
+        badge.style.display = 'none';
+      }
+    }
+  } catch (err) {
+    // Тихо игнорируем ошибку опроса
+  }
+}
+
+async function loadNotificationsList() {
+  if (!auth.token) return;
+  const listEl = document.getElementById('notifications-list');
+  if (!listEl) return;
+  try {
+    const items = await authFetch(`${API_URL}/notifications?page=0&size=20`).then(handleApiResponse);
+    notificationsState.items = Array.isArray(items) ? items : [];
+    renderNotifications();
+  } catch (err) {
+    listEl.innerHTML = `<div class="notifications-empty">Не удалось загрузить: ${escapeHtml(err.message)}</div>`;
+  }
+}
+
+function renderNotifications() {
+  const listEl = document.getElementById('notifications-list');
+  if (!listEl) return;
+
+  if (notificationsState.items.length === 0) {
+    listEl.innerHTML = '<div class="notifications-empty">Нет новых уведомлений</div>';
+    return;
+  }
+
+  listEl.innerHTML = notificationsState.items.map(n => {
+    const isUnread = !n.isRead;
+    const typeClass = (n.type || 'INFO').toLowerCase();
+    const timeFormatted = n.createdAt ? new Date(n.createdAt).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }) : '';
+    return `
+      <div class="notification-item ${isUnread ? 'unread' : ''}" data-id="${n.id}">
+        <div class="notification-top">
+          <span class="notification-type-tag tag-${typeClass}">${escapeHtml(n.type || 'INFO')}</span>
+          <span class="notification-time">${timeFormatted}</span>
+        </div>
+        <div class="notification-title-text">${escapeHtml(n.title || 'Уведомление')}</div>
+        <div class="notification-message-text">${escapeHtml(n.message || '')}</div>
+      </div>
+    `;
+  }).join('');
+
+  listEl.querySelectorAll('.notification-item.unread').forEach(el => {
+    el.addEventListener('click', async () => {
+      const id = el.dataset.id;
+      try {
+        await authFetch(`${API_URL}/notifications/${id}/read`, { method: 'PATCH' });
+        el.classList.remove('unread');
+        fetchUnreadNotificationsCount();
+      } catch (e) {
+        console.error('Failed to mark read', e);
+      }
+    });
+  });
+}
+
+function initNotificationsWidget() {
+  const toggleBtn = document.getElementById('btn-notifications-toggle');
+  const menu = document.getElementById('notifications-menu');
+  const markAllBtn = document.getElementById('btn-mark-all-read');
+
+  if (toggleBtn && menu) {
+    toggleBtn.addEventListener('click', (e) => {
+      e.stopPropagation();
+      const isVisible = menu.style.display === 'block';
+      menu.style.display = isVisible ? 'none' : 'block';
+      if (!isVisible) {
+        loadNotificationsList();
+      }
+    });
+
+    document.addEventListener('click', (e) => {
+      if (!menu.contains(e.target) && !toggleBtn.contains(e.target)) {
+        menu.style.display = 'none';
+      }
+    });
+  }
+
+  if (markAllBtn) {
+    markAllBtn.addEventListener('click', async (e) => {
+      e.stopPropagation();
+      try {
+        await authFetch(`${API_URL}/notifications/mark-all-read`, { method: 'POST' });
+        notificationsState.items.forEach(n => n.isRead = true);
+        renderNotifications();
+        fetchUnreadNotificationsCount();
+        showToast('Все уведомления прочитаны', 'info');
+      } catch (err) {
+        showToast('Ошибка: ' + err.message, 'danger');
+      }
+    });
+  }
+
+  fetchUnreadNotificationsCount();
+  setInterval(fetchUnreadNotificationsCount, 12000);
+}
 
 function openAuthModal(notice = "") {
   const modal = document.getElementById('modal-auth');

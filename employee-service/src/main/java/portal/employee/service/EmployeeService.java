@@ -19,12 +19,14 @@ import java.util.List;
 
 @Service
 @RequiredArgsConstructor
+@lombok.extern.slf4j.Slf4j
 public class EmployeeService {
 
     private final EmployeeRepository employeeRepository;
     private final EmployeeAssignmentRepository assignmentRepository;
     private final BranchService branchService;
     private final PositionService positionService;
+    private final org.springframework.kafka.core.KafkaTemplate<String, Object> kafkaTemplate;
 
     @Transactional(readOnly = true)
     public Page<EmployeeDto.Response> getAllPaged(Pageable pageable) {
@@ -51,7 +53,9 @@ public class EmployeeService {
                 .status(request.getStatus() != null ? request.getStatus() : EmployeeStatus.ACTIVE)
                 .build();
 
-        return toResponse(employeeRepository.save(employee));
+        Employee saved = employeeRepository.save(employee);
+        publishEmployeeEvent(portal.dto.event.EmployeeEventDto.EventType.EMPLOYEE_CREATED, saved, null, null);
+        return toResponse(saved);
     }
 
     @Transactional
@@ -76,7 +80,9 @@ public class EmployeeService {
             }
         }
 
-        return toResponse(employeeRepository.save(employee));
+        Employee saved = employeeRepository.save(employee);
+        publishEmployeeEvent(portal.dto.event.EmployeeEventDto.EventType.EMPLOYEE_UPDATED, saved, null, null);
+        return toResponse(saved);
     }
 
     @Transactional
@@ -87,7 +93,9 @@ public class EmployeeService {
         }
         employee.setStatus(EmployeeStatus.DISMISSED);
         employee.setDismissalDate(LocalDate.now());
-        return toResponse(employeeRepository.save(employee));
+        Employee saved = employeeRepository.save(employee);
+        publishEmployeeEvent(portal.dto.event.EmployeeEventDto.EventType.EMPLOYEE_DISMISSED, saved, null, null);
+        return toResponse(saved);
     }
 
     @Transactional
@@ -98,7 +106,9 @@ public class EmployeeService {
         }
         employee.setStatus(EmployeeStatus.ACTIVE);
         employee.setDismissalDate(null);
-        return toResponse(employeeRepository.save(employee));
+        Employee saved = employeeRepository.save(employee);
+        publishEmployeeEvent(portal.dto.event.EmployeeEventDto.EventType.EMPLOYEE_UPDATED, saved, null, null);
+        return toResponse(saved);
     }
 
     @Transactional
@@ -123,7 +133,28 @@ public class EmployeeService {
                 .build();
 
         EmployeeAssignment saved = assignmentRepository.save(assignment);
+        publishEmployeeEvent(portal.dto.event.EmployeeEventDto.EventType.ASSIGNMENT_CREATED, employee, branch.getId(), position.getId());
         return toAssignmentResponse(saved);
+    }
+
+    private void publishEmployeeEvent(portal.dto.event.EmployeeEventDto.EventType eventType, Employee employee, Long branchId, Long positionId) {
+        if (kafkaTemplate != null && employee != null) {
+            try {
+                portal.dto.event.EmployeeEventDto event = portal.dto.event.EmployeeEventDto.builder()
+                        .eventType(eventType)
+                        .employeeId(employee.getId())
+                        .fullName(employee.getName())
+                        .phone(employee.getPhone())
+                        .status(employee.getStatus() != null ? employee.getStatus().name() : null)
+                        .branchId(branchId)
+                        .positionId(positionId)
+                        .timestamp(java.time.Instant.now())
+                        .build();
+                kafkaTemplate.send("employee-events", String.valueOf(employee.getId()), event);
+            } catch (Exception e) {
+                log.warn("Не удалось отправить событие в Kafka: {}", e.getMessage());
+            }
+        }
     }
 
     @Transactional(readOnly = true)

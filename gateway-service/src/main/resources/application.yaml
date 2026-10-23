@@ -24,6 +24,14 @@ spring:
               uri: lb://schedule-service
               predicates:
                 - Path=/api/schedules/**,/api/shifts/**,/api/absences/**,/api/requests/**
+            - id: notification-service-route
+              uri: lb://notification-service
+              predicates:
+                - Path=/api/notifications/**
+            - id: file-service-route
+              uri: lb://file-service
+              predicates:
+                - Path=/api/files/**
             - id: employee-docs
               uri: lb://employee-service
               predicates:
@@ -40,6 +48,18 @@ spring:
               uri: lb://schedule-service
               predicates:
                 - Path=/v3/api-docs/schedule-service
+              filters:
+                - SetPath=/v3/api-docs
+            - id: notification-docs
+              uri: lb://notification-service
+              predicates:
+                - Path=/v3/api-docs/notification-service
+              filters:
+                - SetPath=/v3/api-docs
+            - id: file-docs
+              uri: lb://file-service
+              predicates:
+                - Path=/v3/api-docs/file-service
               filters:
                 - SetPath=/v3/api-docs
           trusted-proxies: ".*"
@@ -73,3 +93,7 @@ springdoc:
         url: /v3/api-docs/attendance-service
       - name: Schedule Service (WebFlux + JPA)
         url: /v3/api-docs/schedule-service
+      - name: Notification Service (Kafka + Clean Arch)
+        url: /v3/api-docs/notification-service
+      - name: File Service (Clean Arch)
+        url: /v3/api-docs/file-service

@@ -35,6 +35,7 @@ public class RequestService {
     private final ShiftEmployeeLogRepository shiftLogRepository;
     private final EmployeeService employeeService;
     private final ObjectMapper objectMapper;
+    private final org.springframework.kafka.core.KafkaTemplate<String, Object> kafkaTemplate;
 
     public RequestService(RequestRepository requestRepository,
                           EmployeeAbsenceRepository absenceRepository,
@@ -42,12 +43,24 @@ public class RequestService {
                           ShiftEmployeeLogRepository shiftLogRepository,
                           EmployeeService employeeService,
                           ObjectMapper objectMapper) {
+        this(requestRepository, absenceRepository, shiftRepository, shiftLogRepository, employeeService, objectMapper, null);
+    }
+
+    @org.springframework.beans.factory.annotation.Autowired
+    public RequestService(RequestRepository requestRepository,
+                          EmployeeAbsenceRepository absenceRepository,
+                          ShiftRepository shiftRepository,
+                          ShiftEmployeeLogRepository shiftLogRepository,
+                          EmployeeService employeeService,
+                          ObjectMapper objectMapper,
+                          org.springframework.kafka.core.KafkaTemplate<String, Object> kafkaTemplate) {
         this.requestRepository = requestRepository;
         this.absenceRepository = absenceRepository;
         this.shiftRepository = shiftRepository;
         this.shiftLogRepository = shiftLogRepository;
         this.employeeService = employeeService;
         this.objectMapper = objectMapper != null ? objectMapper : new ObjectMapper();
+        this.kafkaTemplate = kafkaTemplate;
     }
 
     @Transactional(readOnly = true)
@@ -82,7 +95,9 @@ public class RequestService {
                 .requestData(createDto.getRequestData())
                 .build();
 
-        return toResponse(requestRepository.save(request));
+        Request saved = requestRepository.save(request);
+        publishRequestEvent(portal.dto.event.ScheduleEventDto.EventType.REQUEST_CREATED, saved);
+        return toResponse(saved);
     }
 
     /**
@@ -121,7 +136,29 @@ public class RequestService {
             handleApprovedAbsence(request, processedBy);
         }
 
-        return toResponse(requestRepository.save(request));
+        Request saved = requestRepository.save(request);
+        portal.dto.event.ScheduleEventDto.EventType eventType = (processDto.getStatus() == RequestStatus.APPROVED)
+                ? portal.dto.event.ScheduleEventDto.EventType.REQUEST_APPROVED
+                : portal.dto.event.ScheduleEventDto.EventType.REQUEST_REJECTED;
+        publishRequestEvent(eventType, saved);
+        return toResponse(saved);
+    }
+
+    private void publishRequestEvent(portal.dto.event.ScheduleEventDto.EventType eventType, Request request) {
+        if (kafkaTemplate != null && request != null) {
+            try {
+                portal.dto.event.ScheduleEventDto event = portal.dto.event.ScheduleEventDto.builder()
+                        .eventType(eventType)
+                        .requestId(request.getId())
+                        .employeeId(request.getEmployee() != null ? request.getEmployee().getId() : null)
+                        .requestType(request.getType() != null ? request.getType().name() : null)
+                        .timestamp(Instant.now())
+                        .build();
+                kafkaTemplate.send("schedule-events", String.valueOf(request.getId()), event);
+            } catch (Exception e) {
+                log.warn("Не удалось отправить событие заявки в Kafka: {}", e.getMessage());
+            }
+        }
     }
 
     private void handleApprovedAbsence(Request request, Employee processedBy) {

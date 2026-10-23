@@ -52,6 +52,9 @@ class EmployeeServicePostgresIntegrationTest {
     @Autowired
     private EmployeeService employeeService;
 
+    @org.springframework.test.context.bean.override.mockito.MockitoBean
+    private org.springframework.kafka.core.KafkaTemplate<String, Object> kafkaTemplate;
+
     @Test
     @DisplayName("Test employee creation and retrieval against Testcontainers PostgreSQL")
     void testCreateEmployeeInPostgresContainer() {

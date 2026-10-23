@@ -47,6 +47,9 @@ class EmployeeServiceTest {
     @Mock
     private PositionService positionService;
 
+    @Mock
+    private org.springframework.kafka.core.KafkaTemplate<String, Object> kafkaTemplate;
+
     @InjectMocks
     private EmployeeService employeeService;
 

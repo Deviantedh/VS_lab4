@@ -13,6 +13,8 @@ COPY gateway-service gateway-service
 COPY employee-service employee-service
 COPY attendance-service attendance-service
 COPY schedule-service schedule-service
+COPY notification-service notification-service
+COPY file-service file-service
 
 ARG MODULE
 RUN chmod +x ./mvnw
@@ -23,10 +25,10 @@ FROM eclipse-temurin:21-jre-alpine
 
 WORKDIR /app
 
-
 COPY config-repo /app/config-repo
 
 RUN addgroup -S appgroup && adduser -S appuser -G appgroup
+RUN mkdir -p /app/uploads && chown -R appuser:appgroup /app/uploads
 USER appuser
 
 ARG MODULE

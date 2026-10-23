@@ -47,6 +47,9 @@ class ShiftServiceTest {
     @Mock
     private EmployeeService employeeService;
 
+    @Mock
+    private org.springframework.kafka.core.KafkaTemplate<String, Object> kafkaTemplate;
+
     private ShiftService shiftService;
 
     private Schedule schedule;
@@ -62,7 +65,8 @@ class ShiftServiceTest {
                 logRepository,
                 absenceRepository,
                 scheduleService,
-                employeeService
+                employeeService,
+                kafkaTemplate
         );
 
         schedule = Schedule.builder()

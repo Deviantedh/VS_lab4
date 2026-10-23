@@ -4,7 +4,7 @@ cd "$(dirname "$0")"
 
 export BUILDX_BAKE_ENTITLEMENTS_FS=0
 
-echo "   Остановка сервисов СУС (ЛР №3)..."
+echo "   Остановка сервисов СУС (ЛР №4)..."
 
 echo "[1/2] Остановка веб-серверов фронтенда (порты 3000 и 3001)..."
 if [ -f .frontend.pid ]; then

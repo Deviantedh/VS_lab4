@@ -20,6 +20,7 @@ import java.util.List;
 
 @Service
 @RequiredArgsConstructor
+@lombok.extern.slf4j.Slf4j
 public class ShiftService {
 
     private final ShiftRepository shiftRepository;
@@ -27,6 +28,7 @@ public class ShiftService {
     private final EmployeeAbsenceRepository absenceRepository;
     private final ScheduleService scheduleService;
     private final EmployeeService employeeService;
+    private final org.springframework.kafka.core.KafkaTemplate<String, Object> kafkaTemplate;
 
     @Transactional(readOnly = true)
     public Page<ShiftDto.Response> getAllPaged(Pageable pageable) {
@@ -123,7 +125,9 @@ public class ShiftService {
                 .build();
         logRepository.save(log);
 
-        return toResponse(shiftRepository.save(shift));
+        Shift saved = shiftRepository.save(shift);
+        publishScheduleEvent(portal.dto.event.ScheduleEventDto.EventType.SHIFT_ASSIGNED, saved, employeeId);
+        return toResponse(saved);
     }
 
     /**
@@ -152,7 +156,28 @@ public class ShiftService {
                 .build();
         logRepository.save(log);
 
-        return toResponse(shiftRepository.save(shift));
+        Shift saved = shiftRepository.save(shift);
+        publishScheduleEvent(portal.dto.event.ScheduleEventDto.EventType.SHIFT_REMOVED, saved, employeeId);
+        return toResponse(saved);
+    }
+
+    private void publishScheduleEvent(portal.dto.event.ScheduleEventDto.EventType eventType, Shift shift, Long employeeId) {
+        if (kafkaTemplate != null && shift != null) {
+            try {
+                portal.dto.event.ScheduleEventDto event = portal.dto.event.ScheduleEventDto.builder()
+                        .eventType(eventType)
+                        .scheduleId(shift.getSchedule() != null ? shift.getSchedule().getId() : null)
+                        .shiftId(shift.getId())
+                        .employeeId(employeeId)
+                        .branchId(shift.getSchedule() != null && shift.getSchedule().getBranch() != null ? shift.getSchedule().getBranch().getId() : null)
+                        .shiftDate(shift.getDate())
+                        .timestamp(java.time.Instant.now())
+                        .build();
+                kafkaTemplate.send("schedule-events", String.valueOf(shift.getId()), event);
+            } catch (Exception e) {
+                log.warn("Не удалось отправить событие расписания в Kafka: {}", e.getMessage());
+            }
+        }
     }
 
     @Transactional(readOnly = true)

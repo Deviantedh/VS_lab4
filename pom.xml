@@ -23,6 +23,8 @@
         <module>employee-service</module>
         <module>attendance-service</module>
         <module>schedule-service</module>
+        <module>notification-service</module>
+        <module>file-service</module>
     </modules>
 
     <properties>

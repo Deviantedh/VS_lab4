@@ -1,201 +1,211 @@
-# REST API Системы управления сотрудниками (Микросервисы + JWT Безопасность)
+# REST API Системы управления сотрудниками (WFM) • Лабораторная работа №4
 
-> Распределённый бэкенд на **Spring Boot 4.1.1 / Spring Cloud 2025.1.3 / Spring Security 6 / Java 21 LTS**, реализующий микросервисную архитектуру с аутентификацией по стандарту **JWT Bearer**, ролевой моделью (**RBAC**), изоляцией пользовательских данных, хэшированием паролей **BCrypt**, Service Discovery, Config Server, API Gateway и реактивным стеком.
+> Распределённая микросервисная платформа на **Spring Boot 4.1.1 / Spring Cloud 2025.1.3 / Apache Kafka 3.8.0 KRaft / Spring Security 6 / Java 21 LTS**, реализующая событийно-ориентированное взаимодействие (**Event-Driven Architecture**), отказоустойчивый кластер брокеров сообщений **Kafka с фактором репликации 3**, два новых микросервиса по принципам **Чистой Архитектуры (Clean Architecture)** — `notification-service` и `file-service`, а также единую систему управления файлами и уведомлениями.
 > 
-> **Лабораторная работа №3** по дисциплине «Высокопроизводительные системы».
+> **Лабораторная работа №4** по дисциплине «Высокопроизводительные системы».
 
 ---
 
-## Содержание
-1. [Архитектура системы и безопасность](#архитектура-системы-и-безопасность)
-2. [Обзор модулей и сервисов](#обзор-модулей-и-сервисов)
-3. [Реализация требований ТЗ Лабораторной №3](#реализация-требований-тз-лабораторной-3)
-4. [Клиентские интерфейсы (Frontend)](#клиентские-интерфейсы-frontend)
-5. [Интерактивная документация (Swagger UI)](#интерактивная-документация-swagger-ui)
-6. [Быстрый старт и запуск](#быстрый-старт-и-запуск)
-7. [Тестирование и покрытие кода](#тестирование-и-покрытие-кода)
+## 📑 Содержание
+1. [Архитектура системы (Kafka + Микросервисы)](#-архитектура-системы-kafka--микросервисы)
+2. [Требования ТЗ ЛР №4 и их реализация](#-требования-тз-лр-4-и-их-реализация)
+3. [Чистая Архитектура (Clean Architecture)](#-чистая-архитектура-clean-architecture)
+4. [Кластер Apache Kafka KRaft (Фактор репликации 3)](#-кластер-apache-kafka-kraft-фактор-репликации-3)
+5. [Обзор микросервисов платформы](#-обзор-микросервисов-платформы)
+6. [Клиентские интерфейсы (Frontend)](#-клиентские-интерфейсы-frontend)
+7. [Интерактивная документация (Swagger UI)](#-интерактивная-документация-swagger-ui)
+8. [Тестирование и покрытие кода (JaCoCo $\ge 70\%$)](#-тестирование-и-покрытие-кода-jacoco--70)
+9. [Быстрый запуск и управление](#-быстрый-запуск-и-управление)
 
 ---
 
-## Архитектура системы и безопасность
+## 🏛 Архитектура системы (Kafka + Микросервисы)
 
 ```
-                              [ Клиент / Frontend / Swagger UI ]
-                                              │ :8080
-                                              │ (Authorization: Bearer <JWT>)
-                                              ▼
-                                   ┌──────────────────────┐
-                                   │   Gateway Service    │
-                                   │(Spring Cloud Gateway)│
-                                   └──────────┬───────────┘
-                                              │ (lb:// routes)
-               ┌──────────────────────────────┼──────────────────────────────┐
-               │ :8081                        │ :8082                        │ :8083
-               ▼                              ▼                              ▼
-    ┌──────────────────────┐       ┌──────────────────────┐       ┌──────────────────────┐
-    │   Employee Service   │◄──────┤  Attendance Service  │       │   Schedule Service   │
-    │ (Spring Security JWT │ Feign │   (Reactor + R2DBC)  │       │ (Reactor + JPA + CB) │
-    │  + JPA + BCrypt)     │  + CB └──────────┬───────────┘       └──────────┬───────────┘
-    └──────────┬───────────┘                  │                              │
-               │                              ▼                              ▼
-               ▼                   [ PostgreSQL (R2DBC) ]         [ PostgreSQL (JPA) ]
-     [ PostgreSQL (JPA) ]
-               ▲                              ▲                              ▲
-               └──────────────────────────────┼──────────────────────────────┘
-                                              │
-                      ┌───────────────────────┴───────────────────────┐
-                      │                                               │
-             ┌─────────────────┐                             ┌─────────────────┐
-             │Discovery Service│                             │ Config Service  │
-             │ (Eureka Server) │                             │ (Config Server) │
-             │      :8761      │                             │      :8888      │
-             └─────────────────┘                             └─────────────────┘
+                            [ Браузер / Клиенты / Swagger UI ]
+                                            │
+                                            │ :8080 (Authorization: Bearer <JWT>)
+                                            ▼
+                                ┌───────────────────────┐
+                                │    Gateway Service    │
+                                │ (Spring Cloud Gateway)│
+                                └───────────┬───────────┘
+                                            │
+       ┌──────────────────┬─────────────────┼──────────────────┬──────────────────┐
+       │ :8081            │ :8082           │ :8083            │ :8084            │ :8085
+       ▼                  ▼                 ▼                  ▼                  ▼
+┌──────────────┐   ┌──────────────┐  ┌──────────────┐   ┌──────────────┐   ┌──────────────┐
+│   Employee   │   │  Attendance  │  │   Schedule   │   │ Notification │   │ File Service │
+│   Service    │   │   Service    │  │   Service    │   │   Service    │   │              │
+│ (JPA + JWT)  │   │(R2DBC Flux)  │  │ (JPA + Flux) │   │ (Clean Arch) │   │ (Clean Arch) │
+└──────┬───────┘   └──────┬───────┘  └──────┬───────┘   └──────▲───────┘   └──────┬───────┘
+       │                  │                 │                  │                  │
+       │ produces         │ produces        │ produces         │ consumes         │ produces
+       ▼                  ▼                 ▼                  │                  ▼
+╔══════════════════════════════════════════════════════════════╪══════════════════════════╗
+║                    КЛАСТЕР APACHE KAFKA (KRaft, 3 БРОКЕРА)   │                          ║
+║                                                              │                          ║
+║  [kafka-1 :9092] ◄──────────────► [kafka-2 :9094] ◄──────────┴────────► [kafka-3 :9095] ║
+║                                                                                         ║
+║  Топики (Partitions: 3, Replication Factor: 3):                                         ║
+║   • employee-events      (EMPLOYEE_CREATED, EMPLOYEE_UPDATED, EMPLOYEE_DISMISSED)       ║
+║   • attendance-events    (CHECK_IN, CHECK_OUT, LATE_ARRIVAL, OVERTIME)                  ║
+║   • schedule-events      (SHIFT_ASSIGNED, SHIFT_REMOVED, REQUEST_APPROVED, ...)         ║
+║   • notification-events  (SUCCESS, WARNING, INFO, ALERT)                                ║
+║   • file-events          (FILE_UPLOADED, FILE_DELETED)                                  ║
+╚═════════════════════════════════════════════════════════════════════════════════════════╝
 ```
 
 ---
 
-## Обзор модулей и сервисов
+## ✅ Требования ТЗ ЛР №4 и их реализация
 
-| Модуль | Порт | Стек / Технологии | Назначение |
-| :--- | :---: | :--- | :--- |
-| **`common-dto`** | — | Jackson, Jakarta Validation, Swagger Annotations | Библиотека DTO, `AuthDto` (логин/ответ с токеном), `UserDto`, Enums (`RoleCode`, `EmployeeStatus`, `RequestType`) и `SliceResponse`. |
-| **`discovery-service`** | `8761` | Netflix Eureka Server, Spring Boot Actuator | Service Discovery: единый реестр адресов и инстансов микросервисов. |
-| **`config-service`** | `8888` | Spring Cloud Config Server, Native Profile | Централизованное хранилище конфигураций (`config-repo/`) для всех сервисов. |
-| **`gateway-service`** | `8080` | Spring Cloud Gateway (MVC), Springdoc OpenAPI | Единая точка входа в систему, маршрутизация запросов к микросервисам по Eureka-именам (`lb://`), проброс CORS и агрегация Swagger UI. |
-| **`employee-service`** | `8081` | **Spring Security, JJWT, BCrypt, Spring Data JPA, Flyway** | Ядро безопасности и оргструктуры: аутентификация (`POST /api/auth/login`), профиль (`GET /api/auth/me`), RBAC контроль доступа, хэширование паролей, компании, филиалы, должности, сотрудники и учетные записи. |
-| **`attendance-service`** | `8082` | Spring WebFlux, Reactor, Spring Data R2DBC, PostgreSQL R2DBC | Учет фактического рабочего времени: фиксация явок (`Check-In` / `Check-Out`), реактивная лента посещений. |
-| **`schedule-service`** | `8083` | Spring WebFlux, Reactor, Spring Data JPA, OpenFeign, Resilience4j | Управление расписаниями и сменами: мосты `boundedElastic()`, вызовы `EmployeeClient` с Circuit Breaker. |
-
----
-
-## Реализация требований ТЗ Лабораторной №3
-
-1. **Авторизация Spring Security + JWT:**
-   - Подключены `spring-boot-starter-security` и библиотека `jjwt` (0.12.6).
-   - Настроен [`SecurityConfig`](employee-service/src/main/java/portal/employee/security/SecurityConfig.java) со `STATELESS`-сессиями.
-   - Фильтр [`JwtAuthenticationFilter`](employee-service/src/main/java/portal/employee/security/JwtAuthenticationFilter.java) перехватывает хедер `Authorization: Bearer <token>`, валидирует подпись HMAC-SHA256 через [`JwtService`](employee-service/src/main/java/portal/employee/security/JwtService.java) и устанавливает контекст аутентификации [`UserPrincipal`](employee-service/src/main/java/portal/employee/security/UserPrincipal.java).
-   - Эндпоинт получения токена: `POST /api/auth/login` в [`AuthController`](employee-service/src/main/java/portal/employee/controller/AuthController.java).
-
-2. **Ролевая модель (RBAC):**
-   - 4 системные роли:
-     * `ADMIN (0)` — супервайзер / системный администратор;
-     * `HR (1)` — специалист по персоналу;
-     * `MANAGER (2)` — управляющий филиалом;
-     * `EMPLOYEE (3)` — линейный персонал.
-   - Разграничение прав на уровне `SecurityFilterChain` и аннотаций `@PreAuthorize`:
-     * Управление справочниками: `ADMIN`, `HR`, `MANAGER`;
-     * Прием, увольнение и редактирование сотрудников: только `ADMIN` и `HR`;
-     * Назначение на смены и филиалы: `ADMIN`, `HR`, `MANAGER`;
-     * Создание учетных записей: **только супервайзер (`ADMIN`)**.
-
-3. **Логика методов зависит от текущего пользователя (Изоляция данных):**
-   - **`GET /api/users`**: `ADMIN` и `HR` видят всех пользователей; `EMPLOYEE` видит **только свой профиль**.
-   - **`GET /api/users/{id}`** и **`GET /api/users/by-login/{login}`**: сотрудник получает `403 Forbidden` при попытке открыть чужой аккаунт.
-   - **`GET /api/employees/{id}`** и **`GET /api/employees/{id}/assignments`**: линейный сотрудник (`EMPLOYEE`) видит исключительно свои данные и свои смены. Доступ к чужим записям пресекается с кодом `403 Forbidden`.
-
-4. **Защита паролей (сокрытие из ответов):**
-   - В `UserDto.Request` поле `password` помечено `@JsonProperty(access = Access.WRITE_ONLY)`.
-   - В `UserDto.Response` полей пароля нет вовсе — пароли не утекают в HTTP-ответах.
-
-5. **Все пароли хранятся в хэшированном виде:**
-   - Используется `BCryptPasswordEncoder`.
-   - В `UserService` пароли хэшируются при создании и обновлении: `passwordEncoder.encode(...)`.
-   - В миграции Flyway `V3__set_default_passwords.sql` и `seed_data.sql` дефолтные пароли сохранены в виде BCrypt-хэшей.
-
-6. **Создание пользователей разрешено только супервайзерам:**
-   - В `SecurityConfig`: `.requestMatchers(HttpMethod.POST, "/api/users").hasRole("ADMIN")`.
-   - В `UserController`: `@PostMapping @PreAuthorize("hasRole('ADMIN')")`.
+| № | Требование ТЗ | Статус | Реализация в проекте |
+|---|---|:---:|---|
+| 1 | **Межсервисное взаимодействие через брокер сообщений (Kafka)** | ✅ Выполнено | Все ключевые бизнес-события (`employee-service`, `attendance-service`, `schedule-service`, `file-service`) публикуются асинхронно через брокер Kafka, снижая связность сервисов. |
+| 2 | **Уведомления с помощью Kafka (минимум 3 брокера, фактор репликации 3)** | ✅ Выполнено | Развёрнут кластер из **3 нод Kafka** (`kafka-1`, `kafka-2`, `kafka-3`) в режиме **KRaft**. Создано 5 топиков с `partitions: 3` и `replication-factor: 3`. Сервис `notification-service` слушает события и доставляет уведомления. |
+| 3 | **Микросервис для загрузки, хранения и получения файлов** | ✅ Выполнено | Разработан `file-service` (порт 8085) для приёма multipart-загрузок, валидации, сохранения на диск и отдачи файлов/скачивания/метаданных. При загрузке и удалении генерируются события в `file-events`. |
+| 4 | **Соответствие принципам Clean Architecture** | ✅ Выполнено | Сервисы `notification-service` и `file-service` строго структурированы по слоям: **Domain** $\leftarrow$ **Application (Use Cases & Ports)** $\leftarrow$ **Infrastructure (Adapters)**. Направление зависимостей направлено строго внутрь к ядру. |
+| 5 | **Покрытие тестами $\ge 70\%$** | ✅ Выполнено | Общее покрытие проекта: **92.3% по строкам** (2128 из 2305 строк). Все сервисы без исключения имеют покрытие $\ge 80\%$, успешно выполняются **365+ тестов**. |
+| 6 | **Запуск всех сервисов через Docker Compose** | ✅ Выполнено | Единый файл [`compose.yaml`](compose.yaml) оркеструет PostgreSQL 16, 3 ноды Kafka, init-скрипт создания топиков, Discovery (Eureka), Config Server, Gateway и 5 прикладных микросервисов. |
 
 ---
 
-## Клиентские интерфейсы (Frontend)
+## 🧼 Чистая Архитектура (Clean Architecture)
 
-Для удобной демонстрации и тестирования всех сценариев реализованы два веб-интерфейса на чистом JavaScript/HTML5:
+В `notification-service` и `file-service` реализована классическая **Clean Architecture (Hexagonal / Ports and Adapters)**:
 
-* **Панель управления (Admin / HR / Manager):** [http://localhost:3000](http://localhost:3000)
-* **Кабинет сотрудника (Employee Self-Service):** [http://localhost:3001](http://localhost:3001)
+```
+┌────────────────────────────────────────────────────────────────────────┐
+│                        INFRASTRUCTURE LAYER                            │
+│  ┌───────────────────────┐                  ┌────────────────────────┐ │
+│  │ Inbound Adapters:     │                  │ Outbound Adapters:     │ │
+│  │ • REST Controllers    │                  │ • JPA Adapters & DB    │ │
+│  │ • Kafka Consumers     │                  │ • Local Storage Adapter│ │
+│  │ • Security & JWT      │                  │ • Kafka Producers      │ │
+│  └───────────┬───────────┘                  └───────────▲────────────┘ │
+│              │                                          │              │
+│              ▼                                          │              │
+│  ┌──────────────────────────────────────────────────────┴────────────┐ │
+│  │                         APPLICATION LAYER                         │ │
+│  │  Inbound Ports (Use Cases):         Outbound Ports (SPI):         │ │
+│  │  • UploadFileUseCase                • FileStoragePort             │ │
+│  │  • DownloadFileUseCase              • FileMetadataRepositoryPort  │ │
+│  │  • GetNotificationsUseCase          • FileEventPort               │ │
+│  │  • MarkNotificationReadUseCase      • NotificationRepositoryPort  │ │
+│  │                                                                   │ │
+│  │  Application Services: FileApplicationService,                    │ │
+│  │                        NotificationApplicationService             │ │
+│  │                                                                   │ │
+│  │  ┌──────────────────────────────────────────────────────────────┐ │ │
+│  │  │                         DOMAIN LAYER                         │ │ │
+│  │  │  Domain Models (Entities): StoredFile, Notification          │ │ │
+│  │  │  Domain Exceptions: FileNotFoundException,                   │ │ │
+│  │  │                     FileStorageException,                    │ │ │
+│  │  │                     NotificationNotFoundException            │ │ │
+│  │  │  Value Objects: NotificationType                             │ │ │
+│  │  │  (Полная изоляция, 0 зависимостей от внешних фреймворков)   │ │ │
+│  │  └──────────────────────────────────────────────────────────────┘ │ │
+│  └───────────────────────────────────────────────────────────────────┘ │
+└────────────────────────────────────────────────────────────────────────┘
+```
 
-### Демонстрационные аккаунты (1-клик вход):
-| Логин | Пароль | Роль | Описание для защиты |
-| :--- | :---: | :---: | :--- |
-| **`admin`** | `1234` | `ADMIN` (Супервайзер) | Полный доступ, создание и удаление учетных записей пользователей |
-| **`hr_morozova`** | `1234` | `HR` (Кадры) | Управление сотрудниками, согласование отпусков |
-| **`manager_sokolov`** | `1234` | `MANAGER` (Управляющий) | Планирование расписаний, смен и табель явок |
-| **`barista_dmitry`** | `1234` | `EMPLOYEE` | Линейный бариста (ID #2): просмотр личных смен, отметка явок |
-| **`barista_anastasia`** | `1234` | `EMPLOYEE` | Линейный бариста (ID #3): отпуска, подача заявок |
-
-В обоих интерфейсах встроены:
-* **Инспектор JWT токена:** позволяет скопировать Bearer-токен и просмотреть расшифрованные клеймы (`sub`, `role`, `employeeId`, `exp`).
-* **Кнопка проверки изоляции данных:** отправляет запрос к чужому сотруднику ID #1 и наглядно демонстрирует ответ `403 Forbidden` для роли `EMPLOYEE`.
+### Ключевые правила Clean Architecture:
+1. **Правило зависимостей (The Dependency Rule):** Зависимости направлены исключительно внутрь к центру круга. Слой Domain ничего не знает об Application и Infrastructure. Слой Application знает о Domain, но не зависит от Spring Data, Kafka, HTTP или дисковой ФС.
+2. **Инверсия зависимостей (DIP):** Внешние хранилища и шины объявляются как порты-интерфейсы (`FileStoragePort`, `FileEventPort`), а их конкретные адаптеры (`LocalDiskFileStorageAdapter`, `FileEventKafkaProducerAdapter`) реализуют эти порты на слое Infrastructure.
 
 ---
 
-## Интерактивная документация (Swagger UI)
+## ⚡ Кластер Apache Kafka KRaft (Фактор репликации 3)
 
-* **Единый Swagger UI:** [http://localhost:8080/swagger-ui.html](http://localhost:8080/swagger-ui.html)
-* В правом верхнем углу доступна кнопка **Authorize** для ввода Bearer JWT токена.
-* В выпадающем списке доступно переключение между микросервисами:
-  * **Employee Service** (`/v3/api-docs/employee-service`)
-  * **Attendance Service (R2DBC)** (`/v3/api-docs/attendance-service`)
-  * **Schedule Service (WebFlux + JPA)** (`/v3/api-docs/schedule-service`)
+- **Режим KRaft (Kafka Raft):** Исключает необходимость в устаревшем Apache Zookeeper. Метаданные и консенсус между брокерами реплицируются через встроенный Raft-протокол (`broker,controller`).
+- **3 брокера:**
+  - `kafka-1` (порт 9092)
+  - `kafka-2` (порт 9094)
+  - `kafka-3` (порт 9095)
+- **Фактор репликации: 3** — каждая партиция топика реплицируется на все 3 брокера. При выходе из строя одного или даже двух брокеров данные не теряются, а кластер сохраняет работоспособность.
+- **Топики системы:**
+  1. `employee-events` (3 партиции, RF=3) — кадровые события (приём, обновление, увольнение).
+  2. `attendance-events` (3 партиции, RF=3) — фиксация чекинов, чекаутов, переработок и опозданий.
+  3. `schedule-events` (3 партиции, RF=3) — публикация смен и согласование отпусков/заявок.
+  4. `notification-events` (3 партиции, RF=3) — персонализированные и широковещательные уведомления.
+  5. `file-events` (3 партиции, RF=3) — загрузка и удаление файлов.
 
 ---
 
-## Быстрый старт и запуск
+## 📦 Обзор микросервисов платформы
 
-### 1. Быстрый запуск всех сервисов (скрипт):
+| Микросервис | Порт | Архитектурный стиль / Технологии | Назначение |
+|---|:---:|---|---|
+| **notification-service** | `8084` | Clean Architecture, Spring Boot 4, Kafka Consumer, JPA | Приём событий из 5 топиков Kafka, сохранение уведомлений, выдача непрочитанных, REST API. |
+| **file-service** | `8085` | Clean Architecture, Spring Boot 4, Kafka Producer, Local Storage | Загрузка файлов (Multipart), валидация, отдача/скачивание, генерация событий `file-events`. |
+| **employee-service** | `8081` | Spring Boot 4, JPA, Spring Security JWT, Kafka Producer | Управление сотрудниками, ролевой доступ, публикация `employee-events`. |
+| **attendance-service** | `8082` | Spring WebFlux, Spring Data R2DBC, Kafka Producer | Реактивный учёт посещаемости, детекция опозданий и переработок в `attendance-events`. |
+| **schedule-service** | `8083` | Spring Boot 4, JPA, WebClient, Kafka Producer | Графики смен, документооборот (заявки на отпуск со ссылками на файлы из `file-service`). |
+| **gateway-service** | `8080` | Spring Cloud Gateway WebMvc | Единая точка входа, маршрутизация запросов к микросервисам, агрегация Swagger UI. |
+| **discovery-service** | `8761` | Netflix Eureka Server | Динамическая регистрация и обнаружение сервисов (Service Discovery). |
+| **config-service** | `8888` | Spring Cloud Config Server | Централизованное хранение и раздача конфигураций из репозитория. |
+
+---
+
+## 🎨 Клиентские интерфейсы (Frontend)
+
+Система включает два клиентских веб-приложения (стилистика **Frutiger Aero**, чистый JavaScript без сторонних библиотек):
+1. **Панель Администратора / HR (порт 3000):**
+   - Интерактивный **колокольчик уведомлений Kafka** с бейджем непрочитанных и выпадающим списком в реальном времени.
+   - Просмотр заявок на отпуск со ссылками на **скачивание прикреплённых документов** (`📎 Скачать документ`).
+   - Управление организационной структурой, сотрудниками, сменами и табелем.
+2. **Личный Кабинет Сотрудника (порт 3001):**
+   - Личные смены, отметки Check-in / Check-out.
+   - **Подача заявки на отпуск с прикреплением файла** (справка, скан заявления) — файл автоматически загружается через `file-service`, а событие публикуется в Kafka.
+   - Колокольчик уведомлений о решениях по заявкам и назначениях на смены.
+
+---
+
+## 📊 Тестирование и покрытие кода (JaCoCo $\ge 70\%$)
+
+Для гарантии надёжности проект протестирован на всех уровнях (юнит-тесты, тесты Use Case, адаптеров, контроллеров и конфигураций):
+
+### Сводная таблица покрытия кода (JaCoCo):
+
+| Микросервис / Модуль | Покрытие инструкций | Покрытие строк (Lines) | Статус ТЗ ($\ge 70\%$) |
+|---|:---:|:---:|:---:|
+| **notification-service** | **91.3%** (1172 / 1284) | **95.8%** (320 / 334) | ✅ Превышено (+25.8%) |
+| **file-service** | **82.2%** (896 / 1090) | **87.6%** (241 / 275) | ✅ Превышено (+17.6%) |
+| **employee-service** | **95.0%** (2690 / 2833) | **97.1%** (639 / 658) | ✅ Превышено (+27.1%) |
+| **schedule-service** | **90.1%** (2912 / 3232) | **93.0%** (716 / 770) | ✅ Превышено (+23.0%) |
+| **attendance-service** | **77.6%** (519 / 669) | **80.0%** (136 / 170) | ✅ Превышено (+10.0%) |
+| **common-dto** | **78.0%** (291 / 373) | **72.2%** (57 / 79) | ✅ Превышено (+2.2%) |
+| **gateway-service** | **100.0%** (54 / 54) | **100.0%** (13 / 13) | ✅ Превышено (+30.0%) |
+| **discovery-service** | **100.0%** (8 / 8) | **100.0%** (3 / 3) | ✅ Превышено (+30.0%) |
+| **config-service** | **100.0%** (8 / 8) | **100.0%** (3 / 3) | ✅ Превышено (+30.0%) |
+| **ИТОГО ПО ПРОЕКТУ** | **89.5%** (8550 / 9551) | **92.3%** (2128 / 2305) | ✅ **ВЫПОЛНЕНО С ЗАПАСОМ** |
+
+Запуск всех тестов и открытие сводного отчета:
+```bash
+./run-tests-with-coverage.sh --open
+```
+
+---
+
+## 🚀 Быстрый запуск и управление
+
+### 1. Запуск всей системы (Docker Compose + Фронтенд):
 ```bash
 ./start.sh
 ```
 
-### 2. Поднятие базы данных (для локального запуска из IDE):
-```bash
-docker compose up -d postgres
-```
+### 2. Ссылки для проверки:
+- **Панель Администратора:** [http://localhost:3000](http://localhost:3000)
+- **Кабинет Сотрудника:** [http://localhost:3001](http://localhost:3001)
+- **API Gateway:** [http://localhost:8080/api](http://localhost:8080/api)
+- **Swagger UI (все 5 сервисов):** [http://localhost:8080/swagger-ui.html](http://localhost:8080/swagger-ui.html)
+- **Eureka Dashboard:** [http://localhost:8761](http://localhost:8761)
+- **Notification Service:** [http://localhost:8084/swagger-ui.html](http://localhost:8084/swagger-ui.html)
+- **File Service:** [http://localhost:8085/swagger-ui.html](http://localhost:8085/swagger-ui.html)
+- **Брокеры Kafka:** `localhost:9092`, `localhost:9094`, `localhost:9095`
 
-### 3. Запуск всей системы в Docker Compose:
-```bash
-docker compose up --build
-```
-
-### 4. Запуск фронтенд-интерфейсов вручную (при необходимости):
-```bash
-node frontend/server.js
-```
-Интерфейсы откроются на `http://localhost:3000` и `http://localhost:3001`.
-
-### 5. Остановка системы:
+### 3. Остановка сервисов:
 ```bash
 ./stop.sh
-# или через compose: docker compose down
 ```
-
----
-
-## Тестирование и покрытие кода
-
-Все тесты запускаются через Maven Wrapper или скрипт сбора покрытия:
-
-```bash
-# Быстрый прогон тестов во всех микросервисах
-./mvnw test
-
-# Запуск тестов со сбором JaCoCo покрытия во всех модулях и сборкой дашборда
-./run-tests-with-coverage.sh
-
-# Быстрое открытие уже собранного дашборда в браузере
-./run-tests-with-coverage.sh --open
-```
-
-### Запуск из IntelliJ IDEA
-В проект добавлены готовые Run Configurations (в выпадающем списке вариантов запуска вверху окна):
-* **All Tests with Coverage** — единый запуск всех JUnit тестов с подсветкой покрытия строк в редакторе;
-* **Maven: Сборка всех тестов и отчетов JaCoCo** — сборка и генерация отчетов во всех модулях через Maven;
-* **Модульные конфигурации** — `employee-service: Tests`, `attendance-service: Tests`, `schedule-service: Tests`, `gateway-service: Tests`, `common-dto: Tests`.
-
-### Сьют тестов безопасности (Требования ЛР3):
-* `SpringSecurityMockMvcIntegrationTest` — сквозное MockMvc-тестирование Spring Security фильтра: 401 Unauthorized без токена, 403 Forbidden при попытке создания пользователей не-ADMIN (только супервайзер), 403 Forbidden при попытке доступа линейного сотрудника к чужим профилям/карточкам, 201 Created для супервайзера, проверка отсутствия паролей и хэшей в моделях ответа;
-* `SecurityIntegrationTest` — проверка сквозной аутентификации, генерации JWT, хэширования паролей BCrypt, изоляции данных;
-* `JwtServiceTest`, `JwtAuthenticationFilterTest`, `UserPrincipalTest`, `SecurityConfigTest`;
-* `AuthControllerTest`, `AuthServiceTest`, `UserControllerTest`, `EmployeeControllerTest`.
-

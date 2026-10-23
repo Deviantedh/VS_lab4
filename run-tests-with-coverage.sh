@@ -5,7 +5,7 @@ set -e
 PROJECT_DIR="$(cd "$(dirname "$0")" && pwd)"
 cd "$PROJECT_DIR"
 
-# Настройка JAVA_HOME, отдавая приоритет Java 21 LTS (Lombok & Spring Boot 4)
+# Настройка JAVA_HOME, отдавая приоритет Java 21 LTS
 if [ -z "$JAVA_HOME" ] || [ "$("${JAVA_HOME}/bin/java" -version 2>&1 | grep -o 'version "[0-9]*' | tr -dc '0-9')" -gt 24 ] 2>/dev/null; then
     if /usr/libexec/java_home -v 21 >/dev/null 2>&1; then
         export JAVA_HOME="$(/usr/libexec/java_home -v 21)"
@@ -44,7 +44,7 @@ cat << 'HTML_EOF' > "$REPORT_DIR/index.html"
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Сводное покрытие кода (JaCoCo Coverage Dashboard)</title>
+    <title>Сводное покрытие кода (JaCoCo Coverage Dashboard - ЛР4)</title>
     <style>
         :root {
             --bg-primary: #0f172a;
@@ -68,7 +68,7 @@ cat << 'HTML_EOF' > "$REPORT_DIR/index.html"
             align-items: center;
         }
         .container {
-            max-width: 1000px;
+            max-width: 1100px;
             width: 100%;
         }
         header {
@@ -90,7 +90,7 @@ cat << 'HTML_EOF' > "$REPORT_DIR/index.html"
         }
         .grid {
             display: grid;
-            grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
+            grid-template-columns: repeat(auto-fit, minmax(320px, 1fr));
             gap: 16px;
             margin-bottom: 25px;
         }
@@ -128,6 +128,9 @@ cat << 'HTML_EOF' > "$REPORT_DIR/index.html"
             background: #0284c7;
             color: white;
             font-weight: 500;
+        }
+        .badge-clean {
+            background: #16a34a;
         }
         .card-desc {
             font-size: 13px;
@@ -177,17 +180,43 @@ cat << 'HTML_EOF' > "$REPORT_DIR/index.html"
     <div class="container">
         <header>
             <h1>Отчеты покрытия кода тестами (JaCoCo Coverage)</h1>
-            <p class="subtitle">Система управления сотрудниками • Микросервисная архитектура (Лабораторная работа №3)</p>
+            <p class="subtitle">Система управления сотрудниками • Микросервисная архитектура • Apache Kafka KRaft • Clean Architecture (Лабораторная работа №4)</p>
         </header>
 
         <div class="grid">
             <div class="card">
                 <div>
                     <div class="card-header">
+                        <span class="module-name">notification-service</span>
+                        <span class="badge badge-clean">Clean Architecture</span>
+                    </div>
+                    <p class="card-desc">Domain (Entities), Application Ports & Use Cases, Infrastructure Kafka Consumers (5 топиков с репликацией 3), REST API уведомлений.</p>
+                </div>
+                <a class="btn-view" href="../../notification-service/target/site/jacoco/index.html" target="_blank">
+                    Открыть отчет notification-service ↗
+                </a>
+            </div>
+
+            <div class="card">
+                <div>
+                    <div class="card-header">
+                        <span class="module-name">file-service</span>
+                        <span class="badge badge-clean">Clean Architecture</span>
+                    </div>
+                    <p class="card-desc">Domain Models, Storage Ports & Use Cases, Local Disk Storage Adapter, Kafka Producer (file-events), загрузка, скачивание и метаданные.</p>
+                </div>
+                <a class="btn-view" href="../../file-service/target/site/jacoco/index.html" target="_blank">
+                    Открыть отчет file-service ↗
+                </a>
+            </div>
+
+            <div class="card">
+                <div>
+                    <div class="card-header">
                         <span class="module-name">employee-service</span>
                         <span class="badge">Бизнес-сервис</span>
                     </div>
-                    <p class="card-desc">JPA, Hibernate, Liquibase, H2 / PostgreSQL Testcontainers, жизненный цикл сотрудников, назначения, должности.</p>
+                    <p class="card-desc">JPA, Hibernate, Flyway, Testcontainers, жизненный цикл сотрудников, Kafka Producer (employee-events), безопасность.</p>
                 </div>
                 <a class="btn-view" href="../../employee-service/target/site/jacoco/index.html" target="_blank">
                     Открыть отчет employee-service ↗
@@ -200,7 +229,7 @@ cat << 'HTML_EOF' > "$REPORT_DIR/index.html"
                         <span class="module-name">attendance-service</span>
                         <span class="badge">Реактивный</span>
                     </div>
-                    <p class="card-desc">Spring WebFlux, Spring Data R2DBC, PostgreSQL, учет посещаемости сотрудников и отметки.</p>
+                    <p class="card-desc">Spring WebFlux, Spring Data R2DBC, PostgreSQL, учет посещаемости сотрудников, Kafka Producer (attendance-events).</p>
                 </div>
                 <a class="btn-view" href="../../attendance-service/target/site/jacoco/index.html" target="_blank">
                     Открыть отчет attendance-service ↗
@@ -213,7 +242,7 @@ cat << 'HTML_EOF' > "$REPORT_DIR/index.html"
                         <span class="module-name">schedule-service</span>
                         <span class="badge">Бизнес-сервис</span>
                     </div>
-                    <p class="card-desc">Графики работы, смены, Resilience4j Circuit Breaker / Feign клиент, транзакционные операции.</p>
+                    <p class="card-desc">Графики работы, смены, отпуска, Kafka Producer (schedule-events), транзакционные операции и документооборот.</p>
                 </div>
                 <a class="btn-view" href="../../schedule-service/target/site/jacoco/index.html" target="_blank">
                     Открыть отчет schedule-service ↗
@@ -226,7 +255,7 @@ cat << 'HTML_EOF' > "$REPORT_DIR/index.html"
                         <span class="module-name">common-dto</span>
                         <span class="badge">Общие DTO</span>
                     </div>
-                    <p class="card-desc">Общие модели данных, валидация DTO, сериализация/десериализация Jackson JSON.</p>
+                    <p class="card-desc">Общие модели данных, Kafka Event DTO (5 событий), валидация моделей, сериализация/десериализация Jackson JSON.</p>
                 </div>
                 <a class="btn-view" href="../../common-dto/target/site/jacoco/index.html" target="_blank">
                     Открыть отчет common-dto ↗

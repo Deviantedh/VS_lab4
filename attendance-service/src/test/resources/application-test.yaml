@@ -10,6 +10,8 @@ spring:
       enabled: false
   flyway:
     enabled: false
+  kafka:
+    bootstrap-servers: localhost:9092
   autoconfigure:
     exclude:
       - org.springframework.boot.flyway.autoconfigure.FlywayAutoConfiguration

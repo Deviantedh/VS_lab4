@@ -33,6 +33,9 @@ class ReactiveAttendanceServiceTest {
     @Mock
     private ReactiveAttendanceRepository repository;
 
+    @Mock
+    private org.springframework.kafka.core.KafkaTemplate<String, Object> kafkaTemplate;
+
     @InjectMocks
     private ReactiveAttendanceService service;
 

@@ -291,4 +291,104 @@ class DtoJacksonSerializationTest {
         assertThat(json).contains("\"hasNext\":false");
         assertThat(json).contains("\"ООО Ромашка\"");
     }
+
+    @Test
+    @DisplayName("Kafka Event DTOs and NotificationDto/FileMetadataDto serialization and deserialization")
+    void testKafkaEventDtosSerialization() throws JsonProcessingException {
+        Instant now = Instant.parse("2026-10-23T12:00:00Z");
+
+        portal.dto.event.EmployeeEventDto empEvent = portal.dto.event.EmployeeEventDto.builder()
+                .eventType(portal.dto.event.EmployeeEventDto.EventType.EMPLOYEE_CREATED)
+                .employeeId(10L)
+                .fullName("Тестовый Сотрудник")
+                .phone("+79998887766")
+                .status("ACTIVE")
+                .branchId(1L)
+                .positionId(2L)
+                .timestamp(now)
+                .build();
+        String empJson = objectMapper.writeValueAsString(empEvent);
+        assertThat(empJson).contains("\"eventType\":\"EMPLOYEE_CREATED\"");
+        portal.dto.event.EmployeeEventDto desEmp = objectMapper.readValue(empJson, portal.dto.event.EmployeeEventDto.class);
+        assertThat(desEmp.getFullName()).isEqualTo("Тестовый Сотрудник");
+
+        portal.dto.event.AttendanceEventDto attEvent = portal.dto.event.AttendanceEventDto.builder()
+                .eventType(portal.dto.event.AttendanceEventDto.EventType.LATE_ARRIVAL)
+                .recordId(50L)
+                .employeeId(10L)
+                .shiftId(100L)
+                .lateMinutes(15)
+                .overtimeMinutes(0)
+                .timestamp(now)
+                .build();
+        String attJson = objectMapper.writeValueAsString(attEvent);
+        assertThat(attJson).contains("\"lateMinutes\":15");
+        portal.dto.event.AttendanceEventDto desAtt = objectMapper.readValue(attJson, portal.dto.event.AttendanceEventDto.class);
+        assertThat(desAtt.getLateMinutes()).isEqualTo(15);
+
+        portal.dto.event.ScheduleEventDto schedEvent = portal.dto.event.ScheduleEventDto.builder()
+                .eventType(portal.dto.event.ScheduleEventDto.EventType.SHIFT_ASSIGNED)
+                .scheduleId(1L)
+                .shiftId(100L)
+                .employeeId(10L)
+                .shiftDate(LocalDate.of(2026, 11, 1))
+                .timestamp(now)
+                .build();
+        String schedJson = objectMapper.writeValueAsString(schedEvent);
+        portal.dto.event.ScheduleEventDto desSched = objectMapper.readValue(schedJson, portal.dto.event.ScheduleEventDto.class);
+        assertThat(desSched.getShiftDate()).isEqualTo(LocalDate.of(2026, 11, 1));
+
+        portal.dto.event.NotificationEventDto notifEvent = portal.dto.event.NotificationEventDto.builder()
+                .eventId("evt-123")
+                .recipientUserId(2L)
+                .title("Заявка одобрена")
+                .message("Ваш отпуск утвержден")
+                .type("SUCCESS")
+                .priority(portal.dto.event.NotificationEventDto.Priority.HIGH)
+                .timestamp(now)
+                .build();
+        String notifJson = objectMapper.writeValueAsString(notifEvent);
+        portal.dto.event.NotificationEventDto desNotif = objectMapper.readValue(notifJson, portal.dto.event.NotificationEventDto.class);
+        assertThat(desNotif.getTitle()).isEqualTo("Заявка одобрена");
+
+        portal.dto.event.FileEventDto fileEvent = portal.dto.event.FileEventDto.builder()
+                .eventType(portal.dto.event.FileEventDto.EventType.FILE_UPLOADED)
+                .fileId(101L)
+                .filename("doc.pdf")
+                .originalFilename("Заявление.pdf")
+                .contentType("application/pdf")
+                .size(1024L)
+                .uploadedBy("ivanov")
+                .timestamp(now)
+                .build();
+        String fileJson = objectMapper.writeValueAsString(fileEvent);
+        portal.dto.event.FileEventDto desFile = objectMapper.readValue(fileJson, portal.dto.event.FileEventDto.class);
+        assertThat(desFile.getOriginalFilename()).isEqualTo("Заявление.pdf");
+
+        NotificationDto notifDto = NotificationDto.builder()
+                .id(1L)
+                .recipientUserId(2L)
+                .title("Заголовок")
+                .message("Текст")
+                .type("INFO")
+                .link("/link")
+                .isRead(false)
+                .build();
+        String notifDtoJson = objectMapper.writeValueAsString(notifDto);
+        NotificationDto desNotifDto = objectMapper.readValue(notifDtoJson, NotificationDto.class);
+        assertThat(desNotifDto.getTitle()).isEqualTo("Заголовок");
+
+        FileMetadataDto metaDto = FileMetadataDto.builder()
+                .id(1L)
+                .filename("f.png")
+                .originalFilename("avatar.png")
+                .contentType("image/png")
+                .size(5000L)
+                .downloadUrl("/api/files/1/download")
+                .uploadedBy("admin")
+                .build();
+        String metaJson = objectMapper.writeValueAsString(metaDto);
+        FileMetadataDto desMeta = objectMapper.readValue(metaJson, FileMetadataDto.class);
+        assertThat(desMeta.getDownloadUrl()).isEqualTo("/api/files/1/download");
+    }
 }

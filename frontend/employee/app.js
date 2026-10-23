@@ -138,6 +138,7 @@ function updateAuthUI() {
   }
 
   updateRoleTabsVisibility(role);
+  fetchUnreadNotificationsCount();
 }
 
 // Состояние личного кабинета и панели управления
@@ -639,9 +640,14 @@ async function loadMyRequests() {
 
     requests.forEach(req => {
       let datesStr = '—';
+      let fileAttachmentHtml = '';
       try {
         const data = JSON.parse(req.requestData);
         datesStr = `${data.dateFrom} — ${data.dateTo}`;
+        if (data.fileId) {
+          const fileName = escapeHtml(data.fileName || 'Вложение');
+          fileAttachmentHtml = `<div style="margin-top: 6px;"><a href="${API_URL}/files/${data.fileId}/download" target="_blank" class="file-attachment-badge" title="Скачать документ">📎 ${fileName}</a></div>`;
+        }
       } catch (e) {
         datesStr = req.requestData;
       }
@@ -654,7 +660,10 @@ async function loadMyRequests() {
       tr.innerHTML = `
         <td><strong>#${req.id}</strong></td>
         <td><strong style="color: var(--text-dark);">${req.type}</strong></td>
-        <td>${datesStr}</td>
+        <td>
+          <div>${datesStr}</div>
+          ${fileAttachmentHtml}
+        </td>
         <td><span class="badge ${badgeClass}">${req.status}</span></td>
         <td>${escapeHtml(req.resolutionComment || 'Ожидает рассмотрения')}</td>
         <td>${formatDateTime(req.createdAt)}</td>
@@ -675,13 +684,37 @@ document.getElementById('form-submit-request').addEventListener('submit', async 
   const dateFrom = document.getElementById('req-date-from').value;
   const dateTo = document.getElementById('req-date-to').value;
   const comment = document.getElementById('req-comment').value.trim();
+  const fileInput = document.getElementById('req-file');
 
   if (dateFrom > dateTo) {
     showToast('Дата начала не может быть позже даты окончания!', 'danger');
     return;
   }
 
-  const requestData = JSON.stringify({ dateFrom, dateTo, comment });
+  let fileId = null;
+  let fileName = null;
+
+  if (fileInput && fileInput.files && fileInput.files.length > 0) {
+    const file = fileInput.files[0];
+    const formData = new FormData();
+    formData.append('file', file);
+    showToast('Загрузка вложения через File-Service...', 'info');
+
+    try {
+      const uploadRes = await authFetch(`${API_URL}/files/upload`, {
+        method: 'POST',
+        body: formData
+      }).then(handleApiResponse);
+
+      fileId = uploadRes.id;
+      fileName = uploadRes.originalFilename;
+    } catch (uploadErr) {
+      showToast('Ошибка загрузки файла: ' + uploadErr.message, 'danger');
+      return;
+    }
+  }
+
+  const requestData = JSON.stringify({ dateFrom, dateTo, comment, fileId, fileName });
 
   try {
     await authFetch(`${API_URL}/requests`, {
@@ -694,9 +727,12 @@ document.getElementById('form-submit-request').addEventListener('submit', async 
       })
     }).then(handleApiResponse);
 
-    showToast('Заявка успешно отправлена на согласование!', 'success');
+    showToast('Заявка успешно отправлена на согласование (событие отправлено в Kafka)!', 'success');
     document.getElementById('form-submit-request').reset();
     loadMyRequests();
+    if (typeof fetchUnreadNotificationsCount === 'function') {
+      setTimeout(fetchUnreadNotificationsCount, 1500);
+    }
   } catch (err) {
     showToast(err.message, 'danger');
   }
@@ -2111,7 +2147,128 @@ window.addEventListener('DOMContentLoaded', async () => {
 
   state.currentEmployeeId = auth.getEmployeeId() || 2;
   await loadEmployeesList();
+  initNotificationsWidget();
 });
+
+// ================= Уведомления (Kafka Events via notification-service) =================
+let notificationsState = {
+  unreadCount: 0,
+  items: [],
+  isOpen: false
+};
+
+async function fetchUnreadNotificationsCount() {
+  if (!auth.token) return;
+  try {
+    const res = await authFetch(`${API_URL}/notifications/unread-count`).then(handleApiResponse);
+    const count = res.unreadCount || 0;
+    notificationsState.unreadCount = count;
+    const badge = document.getElementById('notification-badge');
+    if (badge) {
+      if (count > 0) {
+        badge.textContent = count > 99 ? '99+' : count;
+        badge.style.display = 'inline-block';
+      } else {
+        badge.style.display = 'none';
+      }
+    }
+  } catch (err) {
+    // Тихо игнорируем
+  }
+}
+
+async function loadNotificationsList() {
+  if (!auth.token) return;
+  const listEl = document.getElementById('notifications-list');
+  if (!listEl) return;
+  try {
+    const items = await authFetch(`${API_URL}/notifications?page=0&size=20`).then(handleApiResponse);
+    notificationsState.items = Array.isArray(items) ? items : [];
+    renderNotifications();
+  } catch (err) {
+    listEl.innerHTML = `<div class="notifications-empty">Не удалось загрузить: ${escapeHtml(err.message)}</div>`;
+  }
+}
+
+function renderNotifications() {
+  const listEl = document.getElementById('notifications-list');
+  if (!listEl) return;
+
+  if (notificationsState.items.length === 0) {
+    listEl.innerHTML = '<div class="notifications-empty">Нет новых уведомлений</div>';
+    return;
+  }
+
+  listEl.innerHTML = notificationsState.items.map(n => {
+    const isUnread = !n.isRead;
+    const typeClass = (n.type || 'INFO').toLowerCase();
+    const timeFormatted = n.createdAt ? new Date(n.createdAt).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }) : '';
+    return `
+      <div class="notification-item ${isUnread ? 'unread' : ''}" data-id="${n.id}">
+        <div class="notification-top">
+          <span class="notification-type-tag tag-${typeClass}">${escapeHtml(n.type || 'INFO')}</span>
+          <span class="notification-time">${timeFormatted}</span>
+        </div>
+        <div class="notification-title-text">${escapeHtml(n.title || 'Уведомление')}</div>
+        <div class="notification-message-text">${escapeHtml(n.message || '')}</div>
+      </div>
+    `;
+  }).join('');
+
+  listEl.querySelectorAll('.notification-item.unread').forEach(el => {
+    el.addEventListener('click', async () => {
+      const id = el.dataset.id;
+      try {
+        await authFetch(`${API_URL}/notifications/${id}/read`, { method: 'PATCH' });
+        el.classList.remove('unread');
+        fetchUnreadNotificationsCount();
+      } catch (e) {
+        console.error('Failed to mark read', e);
+      }
+    });
+  });
+}
+
+function initNotificationsWidget() {
+  const toggleBtn = document.getElementById('btn-notifications-toggle');
+  const menu = document.getElementById('notifications-menu');
+  const markAllBtn = document.getElementById('btn-mark-all-read');
+
+  if (toggleBtn && menu) {
+    toggleBtn.addEventListener('click', (e) => {
+      e.stopPropagation();
+      const isVisible = menu.style.display === 'block';
+      menu.style.display = isVisible ? 'none' : 'block';
+      if (!isVisible) {
+        loadNotificationsList();
+      }
+    });
+
+    document.addEventListener('click', (e) => {
+      if (!menu.contains(e.target) && !toggleBtn.contains(e.target)) {
+        menu.style.display = 'none';
+      }
+    });
+  }
+
+  if (markAllBtn) {
+    markAllBtn.addEventListener('click', async (e) => {
+      e.stopPropagation();
+      try {
+        await authFetch(`${API_URL}/notifications/mark-all-read`, { method: 'POST' });
+        notificationsState.items.forEach(n => n.isRead = true);
+        renderNotifications();
+        fetchUnreadNotificationsCount();
+        showToast('Все уведомления прочитаны', 'info');
+      } catch (err) {
+        showToast('Ошибка: ' + err.message, 'danger');
+      }
+    });
+  }
+
+  fetchUnreadNotificationsCount();
+  setInterval(fetchUnreadNotificationsCount, 12000);
+}
 
 function openAuthModal(notice = "") {
   const modal = document.getElementById('modal-auth');

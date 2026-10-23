@@ -52,6 +52,9 @@ class EmployeeServiceSpringBootTest {
     @Autowired
     private PositionService positionService;
 
+    @org.springframework.test.context.bean.override.mockito.MockitoBean
+    private org.springframework.kafka.core.KafkaTemplate<String, Object> kafkaTemplate;
+
     private Long companyId;
     private Long branchId;
     private Long positionId;

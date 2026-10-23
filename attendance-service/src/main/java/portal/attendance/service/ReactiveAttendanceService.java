@@ -18,9 +18,11 @@ import java.time.Instant;
 
 @Service
 @RequiredArgsConstructor
+@lombok.extern.slf4j.Slf4j
 public class ReactiveAttendanceService {
 
     private final ReactiveAttendanceRepository repository;
+    private final org.springframework.kafka.core.KafkaTemplate<String, Object> kafkaTemplate;
 
     public Mono<SliceResponse<AttendanceRecordDto.Response>> getSlice(Long employeeId, int page, int size) {
         int limit = Math.min(Math.max(size, 1), 50);
@@ -101,7 +103,9 @@ public class ReactiveAttendanceService {
                 .updatedAt(now)
                 .build();
 
-        return repository.save(record).map(this::toResponseDto);
+        return repository.save(record)
+                .doOnNext(saved -> publishAttendanceEvent(portal.dto.event.AttendanceEventDto.EventType.CHECK_IN, saved))
+                .map(this::toResponseDto);
     }
 
     public Mono<AttendanceRecordDto.Response> checkOut(Long id, AttendanceRecordDto.CheckOutRequest request) {
@@ -122,7 +126,34 @@ public class ReactiveAttendanceService {
                     record.setUpdatedAt(now);
                     return repository.save(record);
                 })
+                .doOnNext(saved -> {
+                    portal.dto.event.AttendanceEventDto.EventType type = (saved.getOvertimeMinutes() != null && saved.getOvertimeMinutes() > 0)
+                            ? portal.dto.event.AttendanceEventDto.EventType.OVERTIME
+                            : portal.dto.event.AttendanceEventDto.EventType.CHECK_OUT;
+                    publishAttendanceEvent(type, saved);
+                })
                 .map(this::toResponseDto);
+    }
+
+    private void publishAttendanceEvent(portal.dto.event.AttendanceEventDto.EventType eventType, ReactiveAttendanceRecord record) {
+        if (kafkaTemplate != null && record != null) {
+            try {
+                portal.dto.event.AttendanceEventDto event = portal.dto.event.AttendanceEventDto.builder()
+                        .eventType(eventType)
+                        .recordId(record.getId())
+                        .employeeId(record.getEmployeeId())
+                        .shiftId(record.getShiftId())
+                        .actualStart(record.getActualStart() != null ? java.time.LocalDateTime.ofInstant(record.getActualStart(), java.time.ZoneId.systemDefault()) : null)
+                        .actualEnd(record.getActualEnd() != null ? java.time.LocalDateTime.ofInstant(record.getActualEnd(), java.time.ZoneId.systemDefault()) : null)
+                        .lateMinutes(record.getLateMinutes() != null ? record.getLateMinutes().intValue() : 0)
+                        .overtimeMinutes(record.getOvertimeMinutes() != null ? record.getOvertimeMinutes().intValue() : 0)
+                        .timestamp(Instant.now())
+                        .build();
+                kafkaTemplate.send("attendance-events", String.valueOf(record.getEmployeeId()), event);
+            } catch (Exception e) {
+                log.warn("Не удалось отправить событие явки в Kafka: {}", e.getMessage());
+            }
+        }
     }
 
     private AttendanceRecordDto.Response toResponseDto(ReactiveAttendanceRecord entity) {

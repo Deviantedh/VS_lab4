@@ -123,6 +123,30 @@
           </button>
         </div>
 
+        <!-- Уведомления (Kafka Events) -->
+        <div class="notifications-dropdown-container">
+          <button type="button" class="btn btn-secondary btn-sm btn-notifications-toggle" id="btn-notifications-toggle" title="Уведомления Kafka">
+            <svg class="btn-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+              <path d="M18 8A6 6 0 0 0 6 8c0 7-3 9-3 9h18s-3-2-3-9"></path>
+              <path d="M13.73 21a2 2 0 0 1-3.46 0"></path>
+            </svg>
+            <span class="notification-badge" id="notification-badge" style="display: none;">0</span>
+          </button>
+
+          <div class="notifications-menu" id="notifications-menu" style="display: none;">
+            <div class="notifications-header">
+              <div class="notifications-title">
+                <svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="2"><path d="M18 8A6 6 0 0 0 6 8c0 7-3 9-3 9h18s-3-2-3-9"></path><path d="M13.73 21a2 2 0 0 1-3.46 0"></path></svg>
+                <span>Уведомления Kafka</span>
+              </div>
+              <button type="button" class="btn-text-sm" id="btn-mark-all-read" title="Отметить все прочитанными">Прочитать все</button>
+            </div>
+            <div class="notifications-list" id="notifications-list">
+              <div class="notifications-empty">Загрузка уведомлений...</div>
+            </div>
+          </div>
+        </div>
+
         <div id="backend-status" class="status-badge offline">
           <span class="status-dot"></span>
           <span id="backend-status-text">Проверка связи...</span>

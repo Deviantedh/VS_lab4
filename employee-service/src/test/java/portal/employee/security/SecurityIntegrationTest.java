@@ -44,6 +44,9 @@ class SecurityIntegrationTest {
     @Autowired
     private EmployeeService employeeService;
 
+    @org.springframework.test.context.bean.override.mockito.MockitoBean
+    private org.springframework.kafka.core.KafkaTemplate<String, Object> kafkaTemplate;
+
     @Autowired
     private UserRepository userRepository;
 
