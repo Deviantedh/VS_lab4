@@ -1,0 +1,13 @@
+{
+  "name": "portal-frontends",
+  "version": "1.0.0",
+  "description": "Клиентские веб-интерфейсы Системы управления сотрудниками (Admin & Employee)",
+  "scripts": {
+    "start": "node server.js",
+    "admin": "node server.js --admin-only",
+    "employee": "node server.js --employee-only"
+  },
+  "keywords": ["wfm", "admin", "employee", "portal"],
+  "author": "ITMO VPST Team",
+  "license": "MIT"
+}

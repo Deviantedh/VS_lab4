@@ -1,0 +1,28 @@
+server:
+  port: 8082
+  forward-headers-strategy: framework
+
+spring:
+  application:
+    name: attendance-service
+
+  config:
+    import: optional:configserver:${CONFIG_SERVICE_URL:http://config-service:8888}
+
+  r2dbc:
+    url: ${R2DBC_URL:r2dbc:postgresql://localhost:5432/portal_db}
+    username: ${DB_USER:portal_user}
+    password: ${DB_PASSWORD:portal_secret}
+
+eureka:
+  client:
+    service-url:
+      defaultZone: http://localhost:8761/eureka/
+  instance:
+    prefer-ip-address: true
+
+springdoc:
+  api-docs:
+    path: /v3/api-docs
+  swagger-ui:
+    path: /swagger-ui.html

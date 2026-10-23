@@ -1,0 +1,73 @@
+server:
+  port: 8080
+
+spring:
+  application:
+    name: gateway-service
+
+  cloud:
+    gateway:
+      server:
+        webmvc:
+          routes:
+            - id: employee-service-route
+              uri: lb://employee-service
+              predicates:
+                - Path=/api/companies/**,/api/branches/**,/api/positions/**,/api/employees/**,/api/users/**,/api/auth/**
+            - id: attendance-service-route
+              uri: lb://attendance-service
+              predicates:
+                - Path=/api/attendance/**
+            - id: schedule-service-route
+              uri: lb://schedule-service
+              predicates:
+                - Path=/api/schedules/**,/api/shifts/**,/api/absences/**,/api/requests/**
+            - id: employee-docs
+              uri: lb://employee-service
+              predicates:
+                - Path=/v3/api-docs/employee-service
+              filters:
+                - SetPath=/v3/api-docs
+            - id: attendance-docs
+              uri: lb://attendance-service
+              predicates:
+                - Path=/v3/api-docs/attendance-service
+              filters:
+                - SetPath=/v3/api-docs
+            - id: schedule-docs
+              uri: lb://schedule-service
+              predicates:
+                - Path=/v3/api-docs/schedule-service
+              filters:
+                - SetPath=/v3/api-docs
+          trusted-proxies: ".*"
+          x-forwarded-request-headers-filter:
+            enabled: true
+            for-append: false
+            for-enabled: false
+            host-append: false
+            host-enabled: true
+            port-append: false
+            port-enabled: true
+            proto-append: false
+            proto-enabled: true
+
+eureka:
+  client:
+    service-url:
+      defaultZone: http://localhost:8761/eureka/
+  instance:
+    prefer-ip-address: true
+
+springdoc:
+  api-docs:
+    enabled: true
+  swagger-ui:
+    path: /swagger-ui.html
+    urls:
+      - name: Employee Service
+        url: /v3/api-docs/employee-service
+      - name: Attendance Service (R2DBC)
+        url: /v3/api-docs/attendance-service
+      - name: Schedule Service (WebFlux + JPA)
+        url: /v3/api-docs/schedule-service

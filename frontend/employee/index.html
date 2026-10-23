@@ -1,0 +1,990 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>СУС • Кабинет Сотрудника</title>
+  <link rel="stylesheet" href="style.css">
+</head>
+<body>
+
+  <!-- Frutiger Aero Translucent Background Layer -->
+  <div class="aero-wallpaper-bg" aria-hidden="true"></div>
+
+  <div id="toast-container"></div>
+
+  <!-- Шапка приложения -->
+  <header class="app-header">
+    <div class="brand-section">
+      <div class="brand-badge">СУС</div>
+      <div>
+        <h1>СУС • Кабинет Сотрудника</h1>
+      </div>
+    </div>
+
+    <div class="user-auth-bar" id="user-auth-bar">
+      <div class="auth-user-info" id="auth-user-info">
+        <span class="auth-avatar" id="auth-avatar" title="Профиль">
+          <img src="avatar.png" alt="User" class="avatar-icon">
+        </span>
+        <div class="auth-details">
+          <span class="auth-username" id="auth-username">pekarev</span>
+          <span class="auth-role-tag" id="auth-role-badge">EMPLOYEE</span>
+        </div>
+      </div>
+
+      <button type="button" class="btn btn-secondary btn-sm" id="btn-inspect-jwt" title="Просмотреть текущий JWT токен и claims">
+        <svg class="btn-icon" viewBox="0 0 24 24"><path d="M21 2l-2 2m-7.61 7.61a5.5 5.5 0 1 1-7.778 7.778 5.5 5.5 0 0 1 7.777-7.777zm0 0L15.5 7.5m0 0l3 3L22 7l-3-3m-3.5 3.5L19 4"></path></svg>
+        <span>JWT</span>
+      </button>
+
+      <!-- Быстрое переключение учетной записи -->
+      <div class="dropdown-container">
+        <button type="button" class="btn btn-secondary btn-sm" id="btn-quick-switch" title="Быстро войти под другой системной ролью">
+          <svg class="btn-icon" viewBox="0 0 24 24"><path d="M16 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"></path><circle cx="8.5" cy="7" r="4"></circle><polyline points="17 8 20 11 23 8"></polyline></svg>
+          <span>Сменить роль ▾</span>
+        </button>
+        <div class="dropdown-menu" id="quick-switch-menu" style="display: none;">
+          <div class="dropdown-header">Быстрый вход для защиты (1 клик):</div>
+          <button type="button" class="dropdown-item demo-quick-login" data-login="pekarev" data-pass="1234">
+            <strong>pekarev</strong> &nbsp;(Пекарёв Пекарь / EMPLOYEE #2)
+          </button>
+          <button type="button" class="dropdown-item demo-quick-login" data-login="vypechkina" data-pass="1234">
+            <strong>vypechkina</strong> &nbsp;(Выпечкина Слойка / EMPLOYEE #3)
+          </button>
+          <button type="button" class="dropdown-item demo-quick-login" data-login="managerov" data-pass="1234">
+            <strong>managerov</strong> &nbsp;(Менеджеров Менеджер / MANAGER)
+          </button>
+          <button type="button" class="dropdown-item demo-quick-login" data-login="zlobnaya" data-pass="1234">
+            <strong>zlobnaya</strong> &nbsp;(Злобная Клавдия / HR)
+          </button>
+          <button type="button" class="dropdown-item demo-quick-login" data-login="admin" data-pass="1234">
+            <strong>admin</strong> &nbsp;(Иван Иванов / ADMIN)
+          </button>
+        </div>
+      </div>
+
+      <button type="button" class="btn btn-secondary btn-sm" id="btn-logout" title="Выйти из учетной записи">
+        <svg class="btn-icon" viewBox="0 0 24 24"><path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4"></path><polyline points="16 17 21 12 16 7"></polyline><line x1="21" y1="12" x2="9" y2="12"></line></svg>
+        <span>Выйти</span>
+      </button>
+
+      <a id="btn-open-admin-portal" href="http://localhost:3000" target="_blank" class="btn btn-secondary btn-sm" style="display: inline-flex; text-decoration: none;">
+        <svg class="btn-icon" viewBox="0 0 24 24"><rect x="3" y="3" width="7" height="9" rx="1"></rect><rect x="14" y="3" width="7" height="5" rx="1"></rect><rect x="14" y="12" width="7" height="9" rx="1"></rect><rect x="3" y="16" width="7" height="5" rx="1"></rect></svg>
+        <span>Панель управления (Admin) ↗</span>
+      </a>
+    </div>
+  </header>
+
+  <div class="main-wrapper">
+
+    <!-- Навигация по разделам -->
+    <nav class="employee-nav" id="main-nav">
+      <!-- Личные вкладки сотрудника (видны всем) -->
+      <button class="tab-btn active" data-tab="shifts">
+        <svg class="tab-icon" viewBox="0 0 24 24"><rect x="3" y="4" width="18" height="18" rx="2" ry="2"></rect><line x1="16" y1="2" x2="16" y2="6"></line><line x1="8" y1="2" x2="8" y2="6"></line><line x1="3" y1="10" x2="21" y2="10"></line></svg>
+        <span>Мои Смены</span>
+      </button>
+      <button class="tab-btn" data-tab="attendance">
+        <svg class="tab-icon" viewBox="0 0 24 24"><circle cx="12" cy="12" r="10"></circle><polyline points="12 6 12 12 16 14"></polyline></svg>
+        <span>Отметка явок (Check-in / out)</span>
+      </button>
+      <button class="tab-btn" data-tab="requests">
+        <svg class="tab-icon" viewBox="0 0 24 24"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"></path><polyline points="14 2 14 8 20 8"></polyline><line x1="12" y1="18" x2="12" y2="12"></line><line x1="9" y1="15" x2="15" y2="15"></line></svg>
+        <span>Подать заявку</span>
+      </button>
+      <button class="tab-btn" data-tab="absences">
+        <svg class="tab-icon" viewBox="0 0 24 24"><circle cx="12" cy="12" r="5"></circle><line x1="12" y1="1" x2="12" y2="3"></line><line x1="12" y1="21" x2="12" y2="23"></line><line x1="4.22" y1="4.22" x2="5.64" y2="5.64"></line><line x1="18.36" y1="18.36" x2="19.78" y2="19.78"></line><line x1="1" y1="12" x2="3" y2="12"></line><line x1="21" y1="12" x2="23" y2="12"></line><line x1="4.22" y1="19.78" x2="5.64" y2="18.36"></line><line x1="18.36" y1="5.64" x2="19.78" y2="4.22"></line></svg>
+        <span>Мои Отсутствия</span>
+      </button>
+      <button class="tab-btn" data-tab="profile">
+        <svg class="tab-icon" viewBox="0 0 24 24"><path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"></path><circle cx="12" cy="7" r="4"></circle></svg>
+        <span>Мой Профиль</span>
+      </button>
+
+      <!-- Вкладки Управляющего (MANAGER и ADMIN) -->
+      <button class="tab-btn role-tab-mgr" data-tab="mgr-shifts" style="display: none;">
+        <svg class="tab-icon" viewBox="0 0 24 24"><rect x="3" y="3" width="18" height="18" rx="2"></rect><path d="M3 9h18"></path><path d="M9 21V9"></path></svg>
+        <span>Графики и Смены</span>
+      </button>
+      <button class="tab-btn role-tab-mgr" data-tab="mgr-attendance" style="display: none;">
+        <svg class="tab-icon" viewBox="0 0 24 24"><path d="M16 4h2a2 2 0 0 1 2 2v14a2 2 0 0 1-2 2H6a2 2 0 0 1-2-2V6a2 2 0 0 1 2-2h2"></path><rect x="8" y="2" width="8" height="4" rx="1" ry="1"></rect><path d="M9 14l2 2 4-4"></path></svg>
+        <span>Табель явок</span>
+      </button>
+
+      <!-- Согласование заявок команды (MANAGER, HR и ADMIN) -->
+      <button class="tab-btn role-tab-mgr role-tab-hr" data-tab="team-requests" style="display: none;">
+        <svg class="tab-icon" viewBox="0 0 24 24"><polyline points="9 11 12 14 22 4"></polyline><path d="M21 12v7a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11"></path></svg>
+        <span>Согласование заявок</span>
+      </button>
+
+      <!-- Вкладки Кадровой службы (HR и ADMIN) -->
+      <button class="tab-btn role-tab-hr" data-tab="hr-employees" style="display: none;">
+        <svg class="tab-icon" viewBox="0 0 24 24"><path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"></path><circle cx="9" cy="7" r="4"></circle><path d="M23 21v-2a4 4 0 0 0-3-3.87"></path><path d="M16 3.13a4 4 0 0 1 0 7.75"></path></svg>
+        <span>Кадровый состав</span>
+      </button>
+      <button class="tab-btn role-tab-hr" data-tab="hr-users" style="display: none;">
+        <svg class="tab-icon" viewBox="0 0 24 24"><rect x="3" y="11" width="18" height="11" rx="2" ry="2"></rect><path d="M7 11V7a5 5 0 0 1 10 0v4"></path></svg>
+        <span>Пользователи и Доступ</span>
+      </button>
+      <button class="tab-btn role-tab-hr" data-tab="hr-org" style="display: none;">
+        <svg class="tab-icon" viewBox="0 0 24 24"><path d="M3 21h18"></path><path d="M6 21V7a2 2 0 0 1 2-2h8a2 2 0 0 1 2 2v14"></path><path d="M10 9h4"></path><path d="M10 13h4"></path><path d="M10 17h4"></path></svg>
+        <span>Структура организации</span>
+      </button>
+    </nav>
+
+    <!-- Содержимое табов -->
+
+    <!-- ТАБ 1: МОИ СМЕНЫ -->
+    <div id="tab-shifts" class="tab-content active">
+      <div class="card">
+        <h2 class="card-title">Моё расписание и смены</h2>
+        <p class="card-subtitle">Смены, на которые вы официально назначены управляющим</p>
+
+        <div id="my-shifts-container" class="shifts-grid">
+          <p style="color: var(--text-muted); text-align: center; grid-column: 1 / -1; padding: 24px;">
+            Загрузка ваших смен...
+          </p>
+        </div>
+      </div>
+    </div>
+
+    <!-- ТАБ 2: ОТМЕТКА ЯВОК (CHECK-IN / OUT) -->
+    <div id="tab-attendance" class="tab-content">
+      <!-- Информационный баннер запланированной смены / ограничений -->
+      <div id="shift-today-banner" style="background: #ffffff; border: 1px solid var(--border); border-radius: var(--radius); padding: 14px 18px; margin-bottom: 16px;">
+        <div id="shift-today-info" style="font-size: 14px; color: var(--text-main);">
+          Проверка графика смен на сегодня...
+        </div>
+      </div>
+
+      <!-- Виджет часов и кнопки отметки -->
+      <div class="tracker-box">
+        <div class="tracker-time">
+          <h2 id="live-clock">--:--:--</h2>
+          <p id="live-date">Загрузка даты...</p>
+          <p style="margin-top: 6px; font-weight: 600;" id="attendance-status-text">
+            Статус: Готов к фиксации смены
+          </p>
+        </div>
+        <div class="tracker-actions">
+          <button class="btn-tracker btn-check-in" id="btn-clock-in">
+            <svg class="btn-icon" viewBox="0 0 24 24"><polygon points="5 3 19 12 5 21 5 3"></polygon></svg>
+            <span>Начать смену (Check-in)</span>
+          </button>
+          <button class="btn-tracker btn-check-out" id="btn-clock-out">
+            <svg class="btn-icon" viewBox="0 0 24 24"><rect x="6" y="6" width="12" height="12" rx="2"></rect></svg>
+            <span>Завершить смену (Check-out)</span>
+          </button>
+        </div>
+      </div>
+
+      <!-- История явок -->
+      <div class="card">
+        <h2 class="card-title">История моих явок</h2>
+        <p class="card-subtitle">Сравнение плановых и фактически зафиксированных часов</p>
+        <div style="overflow-x: auto;">
+          <table class="styled-table">
+            <thead>
+              <tr>
+                <th>ID</th>
+                <th>План: Начало</th>
+                <th>План: Конец</th>
+                <th>Факт: Приход</th>
+                <th>Факт: Уход</th>
+                <th>Перерыв</th>
+                <th>Комментарий</th>
+              </tr>
+            </thead>
+            <tbody id="my-attendance-table-body">
+              <tr><td colspan="7" style="text-align: center;">Загрузка истории...</td></tr>
+            </tbody>
+          </table>
+        </div>
+      </div>
+    </div>
+
+    <!-- ТАБ 3: ЗАЯВКИ -->
+    <div id="tab-requests" class="tab-content">
+      <div class="card">
+        <h2 class="card-title">Подать новую заявку на отсутствие</h2>
+        <p class="card-subtitle">
+          При одобрении заявки руководителем система автоматически снимет вас со смен в выбранные даты
+        </p>
+
+        <form id="form-submit-request">
+          <div class="form-grid">
+            <div class="form-field">
+              <label for="req-type">Тип отсутствия *</label>
+              <select id="req-type" class="form-input" required>
+                <option value="VACATION">Ежегодный отпуск (VACATION)</option>
+                <option value="SICK_LEAVE">Больничный лист (SICK_LEAVE)</option>
+                <option value="DAY_OFF">Отгул / Выходной за свой счет (DAY_OFF)</option>
+              </select>
+            </div>
+            <div class="form-field">
+              <label for="req-date-from">Дата начала *</label>
+              <input type="date" id="req-date-from" class="form-input" required>
+            </div>
+            <div class="form-field">
+              <label for="req-date-to">Дата окончания *</label>
+              <input type="date" id="req-date-to" class="form-input" required>
+            </div>
+          </div>
+
+          <div class="form-field" style="margin-bottom: 20px;">
+            <label for="req-comment">Причина / Комментарий руководителю</label>
+            <input type="text" id="req-comment" class="form-input" placeholder="Например: Плановый отпуск согласно графику">
+          </div>
+
+          <button type="submit" class="btn-submit">
+            <svg class="btn-icon" viewBox="0 0 24 24"><line x1="22" y1="2" x2="11" y2="13"></line><polygon points="22 2 15 22 11 13 2 9 22 2"></polygon></svg>
+            <span>Отправить заявку на согласование</span>
+          </button>
+        </form>
+      </div>
+
+      <div class="card">
+        <h2 class="card-title">Мои поданные заявки и их статусы</h2>
+        <div style="overflow-x: auto;">
+          <table class="styled-table">
+            <thead>
+              <tr>
+                <th>ID</th>
+                <th>Тип</th>
+                <th>Период</th>
+                <th>Статус</th>
+                <th>Резолюция руководителя</th>
+                <th>Создана</th>
+              </tr>
+            </thead>
+            <tbody id="my-requests-table-body">
+              <tr><td colspan="6" style="text-align: center;">Загрузка заявок...</td></tr>
+            </tbody>
+          </table>
+        </div>
+      </div>
+    </div>
+
+    <!-- ТАБ 4: МОИ ОТСУТСТВИЯ -->
+    <div id="tab-absences" class="tab-content">
+      <div class="card">
+        <h2 class="card-title">Утверждённые периоды отсутствия</h2>
+        <p class="card-subtitle">В эти даты вы освобождены от смен</p>
+        <div style="overflow-x: auto;">
+          <table class="styled-table">
+            <thead>
+              <tr>
+                <th>ID</th>
+                <th>Тип отсутствия</th>
+                <th>Дата с</th>
+                <th>Дата по</th>
+                <th>Причина</th>
+              </tr>
+            </thead>
+            <tbody id="my-absences-table-body">
+              <tr><td colspan="5" style="text-align: center;">Загрузка...</td></tr>
+            </tbody>
+          </table>
+        </div>
+      </div>
+    </div>
+
+    <!-- ТАБ 5: МОЙ ПРОФИЛЬ -->
+    <div id="tab-profile" class="tab-content">
+      <div class="card">
+        <h2 class="card-title">Карточка сотрудника</h2>
+        <p class="card-subtitle">Персональные данные и назначения на ставки</p>
+
+        <div id="profile-details" style="font-size: 15px; line-height: 2;">
+          Загрузка профиля...
+        </div>
+      </div>
+    </div>
+
+    <!-- ТАБ: ГРАФИКИ И СМЕНЫ (ДЛЯ MANAGER / ADMIN) -->
+    <div id="tab-mgr-shifts" class="tab-content">
+      <div class="card">
+        <div style="display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 12px; margin-bottom: 16px;">
+          <div>
+            <h2 class="card-title">Управление расписанием и сменами филиала</h2>
+            <p class="card-subtitle" style="margin-bottom: 0;">Создание смен, распределение персонала и аудит-лог</p>
+          </div>
+          <div style="display: flex; gap: 8px; flex-wrap: wrap; align-items: center;">
+            <select id="mgr-branch-select" class="form-control" style="width: auto;">
+              <option value="">Выберите филиал...</option>
+            </select>
+            <select id="mgr-schedule-select" class="form-control" style="width: auto;">
+              <option value="">Выберите график...</option>
+            </select>
+            <button class="btn btn-secondary btn-sm" id="btn-mgr-create-sched">
+              <svg class="btn-icon" viewBox="0 0 24 24"><line x1="12" y1="5" x2="12" y2="19"></line><line x1="5" y1="12" x2="19" y2="12"></line></svg>
+              <span>Создать график</span>
+            </button>
+            <button class="btn btn-primary btn-sm" id="btn-mgr-create-shift">
+              <svg class="btn-icon" viewBox="0 0 24 24"><circle cx="12" cy="12" r="10"></circle><polyline points="12 6 12 12 16 14"></polyline></svg>
+              <span>Добавить смену</span>
+            </button>
+          </div>
+        </div>
+
+        <div id="mgr-shifts-container">
+          <p style="color: var(--text-muted); text-align: center; padding: 24px;">
+            Выберите филиал и график выше для управления сменами.
+          </p>
+        </div>
+      </div>
+    </div>
+
+    <!-- ТАБ: ТАБЕЛЬ ЯВОК (ДЛЯ MANAGER / ADMIN) -->
+    <div id="tab-mgr-attendance" class="tab-content">
+      <div class="card">
+        <div style="margin-bottom: 16px;">
+          <h2 class="card-title">Табель явок персонала (План / Факт)</h2>
+          <p class="card-subtitle" style="margin-bottom: 0;">Учёт отработанного времени сотрудников филиалов</p>
+        </div>
+
+        <div style="overflow-x: auto;">
+          <table class="data-table">
+            <thead>
+              <tr>
+                <th>ID</th>
+                <th>Сотрудник</th>
+                <th>План начало</th>
+                <th>План конец</th>
+                <th>Факт прихода</th>
+                <th>Факт ухода</th>
+                <th>Перерыв</th>
+                <th>Комментарий</th>
+              </tr>
+            </thead>
+            <tbody id="mgr-attendance-table-body">
+              <tr><td colspan="8" style="text-align: center;">Загрузка табеля...</td></tr>
+            </tbody>
+          </table>
+        </div>
+        <div style="margin-top: 16px; text-align: center;">
+          <button id="btn-mgr-load-more-attendance" class="btn btn-secondary" style="display: none;">
+            Загрузить ещё записи (Slice Next)
+          </button>
+        </div>
+      </div>
+    </div>
+
+    <!-- ТАБ: СОГЛАСОВАНИЕ ЗАЯВОК (ДЛЯ MANAGER / HR / ADMIN) -->
+    <div id="tab-team-requests" class="tab-content">
+      <div class="card">
+        <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 16px; flex-wrap: wrap; gap: 10px;">
+          <div>
+            <h2 class="card-title">Согласование заявок на отпуск и отсутствие</h2>
+            <p class="card-subtitle" style="margin-bottom: 0;">При одобрении сотрудник будет автоматически снят со смен в выбранный период</p>
+          </div>
+          <div>
+            <select id="team-requests-filter" class="form-control" style="width: auto;">
+              <option value="">Все статусы</option>
+              <option value="PENDING" selected>Только на рассмотрении (PENDING)</option>
+              <option value="APPROVED">Одобренные (APPROVED)</option>
+              <option value="REJECTED">Отклоненные (REJECTED)</option>
+            </select>
+          </div>
+        </div>
+
+        <div style="overflow-x: auto;">
+          <table class="data-table">
+            <thead>
+              <tr>
+                <th>ID</th>
+                <th>Сотрудник</th>
+                <th>Тип заявки</th>
+                <th>Период дат</th>
+                <th>Статус</th>
+                <th>Резолюция</th>
+                <th>Действие</th>
+              </tr>
+            </thead>
+            <tbody id="team-requests-table-body">
+              <tr><td colspan="7" style="text-align: center;">Загрузка заявок...</td></tr>
+            </tbody>
+          </table>
+        </div>
+      </div>
+    </div>
+
+    <!-- ТАБ: КАДРОВЫЙ СОСТАВ (ДЛЯ HR / ADMIN) -->
+    <div id="tab-hr-employees" class="tab-content">
+      <div class="card">
+        <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 16px; flex-wrap: wrap; gap: 10px;">
+          <div>
+            <h2 class="card-title">Кадровый состав организации</h2>
+            <p class="card-subtitle" style="margin-bottom: 0;">Приём на работу, увольнение и привязка к филиалам и должностям</p>
+          </div>
+          <div style="display: flex; gap: 8px;">
+            <button class="btn btn-secondary btn-sm" id="btn-hr-assign-emp">
+              <svg class="btn-icon" viewBox="0 0 24 24"><path d="M16 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"></path><circle cx="8.5" cy="7" r="4"></circle></svg>
+              <span>Назначить в филиал</span>
+            </button>
+            <button class="btn btn-primary btn-sm" id="btn-hr-add-emp">
+              <svg class="btn-icon" viewBox="0 0 24 24"><line x1="12" y1="5" x2="12" y2="19"></line><line x1="5" y1="12" x2="19" y2="12"></line></svg>
+              <span>Добавить сотрудника</span>
+            </button>
+          </div>
+        </div>
+
+        <div style="overflow-x: auto;">
+          <table class="data-table">
+            <thead>
+              <tr>
+                <th>ID</th>
+                <th>ФИО</th>
+                <th>Телефон</th>
+                <th>Дата найма</th>
+                <th>Статус</th>
+                <th>Учетная запись / Роль</th>
+                <th>Назначения (Филиал / Должность)</th>
+                <th>Действия</th>
+              </tr>
+            </thead>
+            <tbody id="hr-employees-table-body">
+              <tr><td colspan="8" style="text-align: center;">Загрузка списка сотрудников...</td></tr>
+            </tbody>
+          </table>
+        </div>
+      </div>
+    </div>
+
+    <!-- ТАБ: ПОЛЬЗОВАТЕЛИ И ДОСТУП (ДЛЯ HR / ADMIN) -->
+    <div id="tab-hr-users" class="tab-content">
+      <div class="card">
+        <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 16px; flex-wrap: wrap; gap: 10px;">
+          <div>
+            <h2 class="card-title">Учётные записи и системные роли (0..3)</h2>
+            <p class="card-subtitle" style="margin-bottom: 0;">Выдача логинов и назначение прав: 0: ADMIN, 1: HR, 2: MANAGER, 3: EMPLOYEE</p>
+          </div>
+          <button class="btn btn-primary btn-sm" id="btn-hr-add-user">
+            <svg class="btn-icon" viewBox="0 0 24 24"><line x1="12" y1="5" x2="12" y2="19"></line><line x1="5" y1="12" x2="19" y2="12"></line></svg>
+            <span>Создать пользователя</span>
+          </button>
+        </div>
+
+        <div style="overflow-x: auto;">
+          <table class="data-table">
+            <thead>
+              <tr>
+                <th>ID</th>
+                <th>Логин</th>
+                <th>Привязанный сотрудник</th>
+                <th>Роль в системе</th>
+                <th>Статус</th>
+                <th>Создан</th>
+                <th>Действия</th>
+              </tr>
+            </thead>
+            <tbody id="hr-users-table-body">
+              <tr><td colspan="7" style="text-align: center;">Загрузка пользователей...</td></tr>
+            </tbody>
+          </table>
+        </div>
+      </div>
+    </div>
+
+    <!-- ТАБ: СТРУКТУРА ОРГАНИЗАЦИИ (ДЛЯ HR / ADMIN) -->
+    <div id="tab-hr-org" class="tab-content">
+      <div class="grid-2">
+        <!-- Компании -->
+        <div class="card">
+          <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 12px;">
+            <h3 style="font-size: 16px; font-weight: 600;">Компании (Юрлица)</h3>
+            <button class="btn btn-primary btn-sm" id="btn-hr-add-company">
+              <svg class="btn-icon" viewBox="0 0 24 24"><line x1="12" y1="5" x2="12" y2="19"></line><line x1="5" y1="12" x2="19" y2="12"></line></svg>
+              <span>Добавить</span>
+            </button>
+          </div>
+          <div style="overflow-x: auto;">
+            <table class="data-table">
+              <thead>
+                <tr><th>ID</th><th>Название</th><th>Действия</th></tr>
+              </thead>
+              <tbody id="hr-companies-table-body">
+                <tr><td colspan="3" style="text-align: center;">Загрузка...</td></tr>
+              </tbody>
+            </table>
+          </div>
+        </div>
+
+        <!-- Должности -->
+        <div class="card">
+          <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 12px;">
+            <h3 style="font-size: 16px; font-weight: 600;">Справочник должностей</h3>
+            <button class="btn btn-primary btn-sm" id="btn-hr-add-position">
+              <svg class="btn-icon" viewBox="0 0 24 24"><line x1="12" y1="5" x2="12" y2="19"></line><line x1="5" y1="12" x2="19" y2="12"></line></svg>
+              <span>Добавить</span>
+            </button>
+          </div>
+          <div style="overflow-x: auto;">
+            <table class="data-table">
+              <thead>
+                <tr><th>ID</th><th>Должность</th><th>Действия</th></tr>
+              </thead>
+              <tbody id="hr-positions-table-body">
+                <tr><td colspan="3" style="text-align: center;">Загрузка...</td></tr>
+              </tbody>
+            </table>
+          </div>
+        </div>
+      </div>
+
+      <!-- Филиалы -->
+      <div class="card" style="margin-top: 20px;">
+        <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 12px; flex-wrap: wrap; gap: 10px;">
+          <h3 style="font-size: 16px; font-weight: 600;">Филиалы компании</h3>
+          <div style="display: flex; gap: 8px; align-items: center;">
+            <select id="hr-branch-company-select" class="form-control" style="width: auto;">
+              <option value="">Выберите компанию...</option>
+            </select>
+            <button class="btn btn-primary btn-sm" id="btn-hr-add-branch">
+              <svg class="btn-icon" viewBox="0 0 24 24"><line x1="12" y1="5" x2="12" y2="19"></line><line x1="5" y1="12" x2="19" y2="12"></line></svg>
+              <span>Добавить филиал</span>
+            </button>
+          </div>
+        </div>
+        <div style="overflow-x: auto;">
+          <table class="data-table">
+            <thead>
+              <tr>
+                <th>ID</th><th>Название филиала</th><th>Адрес</th><th>Телефон</th><th>Статус</th><th>Действия</th>
+              </tr>
+            </thead>
+            <tbody id="hr-branches-table-body">
+              <tr><td colspan="6" style="text-align: center;">Выберите компанию для просмотра филиалов</td></tr>
+            </tbody>
+          </table>
+        </div>
+      </div>
+    </div>
+
+  </div>
+
+  <!-- ================= МОДАЛЬНЫЕ ОКНА (<dialog>) ================= -->
+
+  <!-- Модалка: Новая компания -->
+  <dialog id="modal-company">
+    <div class="modal-header">
+      <h4>Добавить новую компанию</h4>
+      <button class="btn btn-secondary btn-sm btn-close-modal">✕</button>
+    </div>
+    <form id="form-company">
+      <div class="modal-body">
+        <div class="form-group">
+          <label for="company-name">Название компании / сети *</label>
+          <input type="text" id="company-name" class="form-control" required placeholder="Например: Coffee Like">
+        </div>
+      </div>
+      <div class="modal-footer">
+        <button type="button" class="btn btn-secondary btn-close-modal">Отмена</button>
+        <button type="submit" class="btn btn-primary">Создать</button>
+      </div>
+    </form>
+  </dialog>
+
+  <!-- Модалка: Новый филиал -->
+  <dialog id="modal-branch">
+    <div class="modal-header">
+      <h4>Добавить филиал компании</h4>
+      <button class="btn btn-secondary btn-sm btn-close-modal">✕</button>
+    </div>
+    <form id="form-branch">
+      <div class="modal-body">
+        <div class="form-group">
+          <label for="modal-branch-company-select">Компания *</label>
+          <select id="modal-branch-company-select" class="form-control" required></select>
+        </div>
+        <div class="form-group">
+          <label for="branch-name">Название филиала / точки *</label>
+          <input type="text" id="branch-name" class="form-control" required placeholder="Например: Филиал Невский">
+        </div>
+        <div class="form-group">
+          <label for="branch-address">Адрес *</label>
+          <input type="text" id="branch-address" class="form-control" required placeholder="Невский пр-т, 45">
+        </div>
+        <div class="form-group">
+          <label for="branch-phone">Телефон филиала</label>
+          <input type="tel" id="branch-phone" class="form-control" placeholder="+79991234567">
+        </div>
+      </div>
+      <div class="modal-footer">
+        <button type="button" class="btn btn-secondary btn-close-modal">Отмена</button>
+        <button type="submit" class="btn btn-primary">Создать филиал</button>
+      </div>
+    </form>
+  </dialog>
+
+  <!-- Модалка: Новая должность -->
+  <dialog id="modal-position">
+    <div class="modal-header">
+      <h4>Добавить должность</h4>
+      <button class="btn btn-secondary btn-sm btn-close-modal">✕</button>
+    </div>
+    <form id="form-position">
+      <div class="modal-body">
+        <div class="form-group">
+          <label for="position-title">Название должности *</label>
+          <input type="text" id="position-title" class="form-control" required placeholder="Например: Бариста, Повар, Менеджер">
+        </div>
+      </div>
+      <div class="modal-footer">
+        <button type="button" class="btn btn-secondary btn-close-modal">Отмена</button>
+        <button type="submit" class="btn btn-primary">Добавить</button>
+      </div>
+    </form>
+  </dialog>
+
+  <!-- Модалка: Новый сотрудник -->
+  <dialog id="modal-employee">
+    <div class="modal-header">
+      <h4>Новый сотрудник</h4>
+      <button class="btn btn-secondary btn-sm btn-close-modal">✕</button>
+    </div>
+    <form id="form-employee">
+      <div class="modal-body">
+        <div class="form-group">
+          <label for="emp-name">ФИО сотрудника *</label>
+          <input type="text" id="emp-name" class="form-control" required placeholder="Иванов Иван Иванович">
+        </div>
+        <div class="form-group">
+          <label for="emp-phone">Номер телефона (формат +7XXXXXXXXXX) *</label>
+          <input type="tel" id="emp-phone" class="form-control" required pattern="^\+?[0-9]{10,15}$" placeholder="+79991234567">
+        </div>
+        <div class="form-group">
+          <label for="emp-birth">Дата рождения</label>
+          <input type="date" id="emp-birth" class="form-control">
+        </div>
+        <div class="form-group">
+          <label for="emp-hire">Дата приема на работу *</label>
+          <input type="date" id="emp-hire" class="form-control" required>
+        </div>
+
+        <div style="border-top: 1px solid var(--border); padding-top: 14px; margin-top: 6px;">
+          <div class="form-group" style="display: flex; flex-direction: row; gap: 8px; align-items: center;">
+            <input type="checkbox" id="emp-create-user-check">
+            <label for="emp-create-user-check" style="margin: 0; cursor: pointer; font-weight: 600;">Создать учетную запись сразу</label>
+          </div>
+          <div id="emp-user-fields" style="display: none; margin-top: 10px; flex-direction: column; gap: 10px;">
+            <div class="form-group">
+              <label for="emp-user-login">Логин пользователя</label>
+              <input type="text" id="emp-user-login" class="form-control" placeholder="Например: ivan_manager">
+            </div>
+            <div class="form-group">
+              <label for="emp-user-role">Роль в системе (0-3)</label>
+              <select id="emp-user-role" class="form-control">
+                <option value="3">3 — EMPLOYEE (Линейный сотрудник)</option>
+                <option value="2">2 — MANAGER (Управляющий филиалом / смены)</option>
+                <option value="1">1 — HR (Кадровый специалист)</option>
+                <option value="0">0 — ADMIN (Администратор системы)</option>
+              </select>
+            </div>
+          </div>
+        </div>
+      </div>
+      <div class="modal-footer">
+        <button type="button" class="btn btn-secondary btn-close-modal">Отмена</button>
+        <button type="submit" class="btn btn-primary">Зарегистрировать</button>
+      </div>
+    </form>
+  </dialog>
+
+  <!-- Модалка: Учётная запись и роль пользователя -->
+  <dialog id="modal-user">
+    <div class="modal-header">
+      <h4 id="modal-user-title">Учетная запись и системная роль</h4>
+      <button class="btn btn-secondary btn-sm btn-close-modal">✕</button>
+    </div>
+    <form id="form-user">
+      <input type="hidden" id="user-id">
+      <div class="modal-body">
+        <div class="form-group">
+          <label for="user-employee-id">Привязанный сотрудник</label>
+          <select id="user-employee-id" class="form-control">
+            <option value="">Без привязки (Системный аккаунт)</option>
+          </select>
+        </div>
+        <div class="form-group">
+          <label for="user-login">Логин *</label>
+          <input type="text" id="user-login" class="form-control" required minlength="3" maxlength="100" placeholder="Логин">
+        </div>
+        <div class="form-group">
+          <label for="user-role-select">Системная роль (0-3) *</label>
+          <select id="user-role-select" class="form-control" required>
+            <option value="3">3 — EMPLOYEE (Линейный сотрудник: график, явки, заявки)</option>
+            <option value="2">2 — MANAGER (Управляющий: графики смен, назначения, табель)</option>
+            <option value="1">1 — HR (Кадровый специалист: структура, сотрудники, доступ, отпуска)</option>
+            <option value="0">0 — ADMIN (Администратор: полный доступ ко всей системе)</option>
+          </select>
+        </div>
+      </div>
+      <div class="modal-footer">
+        <button type="button" class="btn btn-secondary btn-close-modal">Отмена</button>
+        <button type="submit" class="btn btn-primary" id="btn-submit-user">Сохранить</button>
+      </div>
+    </form>
+  </dialog>
+
+  <!-- Модалка: Назначение сотрудника в филиал -->
+  <dialog id="modal-assign-employee">
+    <div class="modal-header">
+      <h4>Назначить сотрудника на филиал и должность</h4>
+      <button class="btn btn-secondary btn-sm btn-close-modal">✕</button>
+    </div>
+    <form id="form-assign-employee">
+      <div class="modal-body">
+        <div class="form-group">
+          <label for="assign-emp-id">Сотрудник *</label>
+          <select id="assign-emp-id" class="form-control" required></select>
+        </div>
+        <div class="form-group">
+          <label for="assign-branch-id">Филиал *</label>
+          <select id="assign-branch-id" class="form-control" required></select>
+        </div>
+        <div class="form-group">
+          <label for="assign-pos-id">Должность *</label>
+          <select id="assign-pos-id" class="form-control" required></select>
+        </div>
+        <div class="form-group">
+          <label for="assign-started-at">Дата начала *</label>
+          <input type="date" id="assign-started-at" class="form-control" required>
+        </div>
+        <div class="form-group" style="display: flex; flex-direction: row; gap: 8px; align-items: center;">
+          <input type="checkbox" id="assign-is-primary" checked>
+          <label for="assign-is-primary" style="margin: 0; cursor: pointer;">Основная ставка (Primary)</label>
+        </div>
+      </div>
+      <div class="modal-footer">
+        <button type="button" class="btn btn-secondary btn-close-modal">Отмена</button>
+        <button type="submit" class="btn btn-primary">Привязать ставку</button>
+      </div>
+    </form>
+  </dialog>
+
+  <!-- Модалка: Создание графика -->
+  <dialog id="modal-schedule">
+    <div class="modal-header">
+      <h4>Создать график для филиала</h4>
+      <button class="btn btn-secondary btn-sm btn-close-modal">✕</button>
+    </div>
+    <form id="form-schedule">
+      <div class="modal-body">
+        <div class="form-group">
+          <label for="sched-branch-id">Филиал *</label>
+          <select id="sched-branch-id" class="form-control" required></select>
+        </div>
+        <div class="form-group">
+          <label for="sched-date-from">Дата начала (Date From) *</label>
+          <input type="date" id="sched-date-from" class="form-control" required>
+        </div>
+        <div class="form-group">
+          <label for="sched-date-to">Дата окончания (Date To) *</label>
+          <input type="date" id="sched-date-to" class="form-control" required>
+        </div>
+      </div>
+      <div class="modal-footer">
+        <button type="button" class="btn btn-secondary btn-close-modal">Отмена</button>
+        <button type="submit" class="btn btn-primary">Создать график</button>
+      </div>
+    </form>
+  </dialog>
+
+  <!-- Модалка: Создание смены -->
+  <dialog id="modal-shift">
+    <div class="modal-header">
+      <h4>Добавить смену</h4>
+      <button class="btn btn-secondary btn-sm btn-close-modal">✕</button>
+    </div>
+    <form id="form-shift">
+      <div class="modal-body">
+        <div class="form-group">
+          <label for="shift-date">Дата смены *</label>
+          <input type="date" id="shift-date" class="form-control" required>
+        </div>
+        <div class="grid-2">
+          <div class="form-group">
+            <label for="shift-time-from">Время начала *</label>
+            <input type="time" id="shift-time-from" class="form-control" value="09:00" required>
+          </div>
+          <div class="form-group">
+            <label for="shift-time-to">Время окончания *</label>
+            <input type="time" id="shift-time-to" class="form-control" value="18:00" required>
+          </div>
+        </div>
+        <div class="form-group">
+          <label for="shift-break">Обеденный перерыв (минут)</label>
+          <input type="number" id="shift-break" class="form-control" value="30" min="0" max="180">
+        </div>
+      </div>
+      <div class="modal-footer">
+        <button type="button" class="btn btn-secondary btn-close-modal">Отмена</button>
+        <button type="submit" class="btn btn-primary">Создать смену</button>
+      </div>
+    </form>
+  </dialog>
+
+  <!-- Модалка: Назначение сотрудника на смену -->
+  <dialog id="modal-assign-shift">
+    <div class="modal-header">
+      <h4>Назначить сотрудника на смену</h4>
+      <button class="btn btn-secondary btn-sm btn-close-modal">✕</button>
+    </div>
+    <form id="form-assign-shift">
+      <input type="hidden" id="assign-shift-id">
+      <div class="modal-body">
+        <p id="assign-shift-details" style="font-size: 13px; color: var(--text-muted);"></p>
+        <div class="form-group">
+          <label for="shift-assign-emp-id">Выберите сотрудника *</label>
+          <select id="shift-assign-emp-id" class="form-control" required></select>
+        </div>
+      </div>
+      <div class="modal-footer">
+        <button type="button" class="btn btn-secondary btn-close-modal">Отмена</button>
+        <button type="submit" class="btn btn-primary">Назначить</button>
+      </div>
+    </form>
+  </dialog>
+
+  <!-- Модалка: Аудит-лог смены -->
+  <dialog id="modal-shift-logs" style="max-width: 640px;">
+    <div class="modal-header">
+      <h4>Журнал изменений состава смены (Аудит-лог)</h4>
+      <button class="btn btn-secondary btn-sm btn-close-modal">✕</button>
+    </div>
+    <div class="modal-body" style="overflow-x: auto;">
+      <table class="data-table">
+        <thead>
+          <tr>
+            <th>Время</th>
+            <th>Сотрудник</th>
+            <th>Действие</th>
+            <th>Кто изменил</th>
+          </tr>
+        </thead>
+        <tbody id="shift-logs-table-body">
+          <tr><td colspan="4" style="text-align: center;">Загрузка журнала...</td></tr>
+        </tbody>
+      </table>
+    </div>
+    <div class="modal-footer">
+      <button type="button" class="btn btn-secondary btn-close-modal">Закрыть</button>
+    </div>
+  </dialog>
+
+  <!-- Модалка: Рассмотрение заявки (Одобрить/Отклонить) -->
+  <dialog id="modal-process-request">
+    <div class="modal-header">
+      <h4>Рассмотрение заявки на отсутствие</h4>
+      <button class="btn btn-secondary btn-sm btn-close-modal">✕</button>
+    </div>
+    <form id="form-process-request">
+      <input type="hidden" id="process-request-id">
+      <div class="modal-body">
+        <div id="process-request-info" style="font-size: 14px; background: #f8fafc; padding: 12px; border-radius: var(--radius-sm);"></div>
+        <div class="form-group">
+          <label for="process-decision">Решение *</label>
+          <select id="process-decision" class="form-control" required>
+            <option value="APPROVED">Одобрить (сотрудник будет автоматически снят с конфликтующих смен)</option>
+            <option value="REJECTED">Отклонить</option>
+          </select>
+        </div>
+        <div class="form-group">
+          <label for="process-comment">Комментарий руководителя</label>
+          <input type="text" id="process-comment" class="form-control" placeholder="Например: Согласовано">
+        </div>
+      </div>
+      <div class="modal-footer">
+        <button type="button" class="btn btn-secondary btn-close-modal">Отмена</button>
+        <button type="submit" class="btn btn-primary">Применить решение</button>
+      </div>
+    </form>
+  </dialog>
+
+  <!-- Модалка: Аутентификация (JWT Login) -->
+  <dialog id="modal-auth" style="max-width: 520px; width: 92%;">
+    <div class="modal-header">
+      <h4>Вход в Личный кабинет (JWT Auth)</h4>
+    </div>
+    <div class="modal-body">
+      <p style="font-size: 13px; color: var(--text-muted); margin-bottom: 16px;">
+        Для доступа к сменам и отметке явок требуется авторизация по стандарту <strong>Spring Security + JWT</strong>. Выберите предустановленный аккаунт или укажите логин и пароль:
+      </p>
+
+      <div class="quick-login-section" style="margin-bottom: 18px;">
+        <label style="font-size: 11px; font-weight: 700; text-transform: uppercase; color: var(--text-muted); letter-spacing: 0.5px;">
+          Быстрый вход для защиты (1 клик):
+        </label>
+        <div class="demo-accounts-grid" style="display: grid; grid-template-columns: 1fr 1fr; gap: 8px; margin-top: 8px;">
+          <button type="button" class="btn btn-secondary btn-sm demo-login-btn" data-login="pekarev" data-pass="1234">
+            <strong>pekarev</strong> <small>(Пекарёв Пекарь)</small>
+          </button>
+          <button type="button" class="btn btn-secondary btn-sm demo-login-btn" data-login="vypechkina" data-pass="1234">
+            <strong>vypechkina</strong> <small>(Выпечкина Слойка)</small>
+          </button>
+          <button type="button" class="btn btn-secondary btn-sm demo-login-btn" data-login="managerov" data-pass="1234">
+            <strong>managerov</strong> <small>(Менеджеров)</small>
+          </button>
+          <button type="button" class="btn btn-secondary btn-sm demo-login-btn" data-login="admin" data-pass="1234">
+            <strong>admin</strong> <small>(Иван Иванов)</small>
+          </button>
+        </div>
+      </div>
+
+      <div style="text-align: center; margin: 16px 0; position: relative;">
+        <hr style="border: none; border-top: 1px solid var(--border);">
+        <span style="position: absolute; top: -10px; left: 50%; transform: translateX(-50%); background: #fff; padding: 0 10px; font-size: 12px; color: var(--text-muted);">или логин и пароль</span>
+      </div>
+
+      <form id="form-auth-login">
+        <div class="form-group">
+          <label for="auth-input-login">Логин *</label>
+          <input type="text" id="auth-input-login" class="form-control" required placeholder="Например: pekarev">
+        </div>
+        <div class="form-group">
+          <label for="auth-input-password">Пароль *</label>
+          <input type="password" id="auth-input-password" class="form-control" required placeholder="Например: 1234">
+        </div>
+        <div id="auth-error-msg" style="display: none; color: var(--danger); font-size: 13px; font-weight: 600; margin-top: 10px;"></div>
+        <div style="margin-top: 20px;">
+          <button type="submit" class="btn btn-primary" id="btn-submit-auth" style="width: 100%; padding: 10px;">
+            Войти и получить JWT токен
+          </button>
+        </div>
+      </form>
+    </div>
+  </dialog>
+
+  <!-- Модалка: Инспектор JWT токена -->
+  <dialog id="modal-jwt-inspector" style="max-width: 600px; width: 92%;">
+    <div class="modal-header">
+      <h4>Инспектор JWT токена (Spring Security)</h4>
+      <button type="button" class="btn btn-secondary btn-sm btn-close-modal">✕</button>
+    </div>
+    <div class="modal-body">
+      <div class="form-group">
+        <label>Сырой JWT Bearer токен (передается в <code>Authorization: Bearer ...</code>):</label>
+        <textarea id="jwt-raw-token" class="form-control" rows="4" readonly style="font-family: monospace; font-size: 11px; word-break: break-all; background: #f8fafc;"></textarea>
+        <button type="button" class="btn btn-secondary btn-sm" style="margin-top: 6px;" id="btn-copy-jwt">Скопировать токен</button>
+      </div>
+
+      <div class="form-group" style="margin-top: 16px;">
+        <label>Декодированные клеймы токена (Claims / Payload):</label>
+        <table class="data-table" style="font-size: 13px; margin-top: 6px;">
+          <thead>
+            <tr><th>Claim</th><th>Значение</th><th>Назначение</th></tr>
+          </thead>
+          <tbody id="jwt-claims-body"></tbody>
+        </table>
+      </div>
+    </div>
+    <div class="modal-footer">
+      <button type="button" class="btn btn-primary btn-close-modal">Закрыть</button>
+    </div>
+  </dialog>
+
+  <script src="app.js"></script>
+</body>
+</html>

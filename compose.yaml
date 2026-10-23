@@ -1,0 +1,148 @@
+services:
+  postgres:
+    image: 'postgres:16-alpine'
+    container_name: portal-postgres
+    restart: unless-stopped
+    environment:
+      POSTGRES_DB: portal_db
+      POSTGRES_USER: portal_user
+      POSTGRES_PASSWORD: portal_secret
+    ports:
+      - '5432:5432'
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U portal_user -d portal_db"]
+      interval: 5s
+      timeout: 5s
+      retries: 5
+
+  discovery-service:
+    build:
+      context: .
+      args:
+        MODULE: discovery-service
+    container_name: portal-discovery
+    restart: unless-stopped
+    ports:
+      - '8761:8761'
+    environment:
+      SERVER_PORT: 8761
+    healthcheck:
+      test: ["CMD-SHELL", "wget -q --spider http://localhost:8761/eureka/apps"]
+      interval: 15s
+      timeout: 5s
+      retries: 40
+      start_period: 600s
+
+  config-service:
+    build:
+      context: .
+      args:
+        MODULE: config-service
+    container_name: portal-config
+    restart: unless-stopped
+    ports:
+      - '8888:8888'
+    healthcheck:
+      test: ["CMD-SHELL", "wget -q --spider http://localhost:8888/attendance-service/default"]
+      interval: 15s
+      timeout: 5s
+      retries: 40
+      start_period: 600s
+    environment:
+      SERVER_PORT: 8888
+      EUREKA_CLIENT_SERVICEURL_DEFAULTZONE: http://discovery-service:8761/eureka/
+    depends_on:
+      discovery-service:
+        condition: service_healthy
+
+  gateway-service:
+    build:
+      context: .
+      args:
+        MODULE: gateway-service
+    container_name: portal-gateway
+    restart: unless-stopped
+    ports:
+      - '8080:8080'
+    environment:
+      SERVER_PORT: 8080
+      EUREKA_CLIENT_SERVICEURL_DEFAULTZONE: http://discovery-service:8761/eureka/
+    depends_on:
+      discovery-service:
+        condition: service_healthy
+      config-service:
+        condition: service_healthy
+
+  employee-service:
+    build:
+      context: .
+      args:
+        MODULE: employee-service
+    container_name: portal-employee-service
+    restart: unless-stopped
+    ports:
+      - '8081:8081'
+    environment:
+      SERVER_PORT: 8081
+      DB_URL: jdbc:postgresql://postgres:5432/portal_db
+      DB_USER: portal_user
+      DB_PASSWORD: portal_secret
+      EUREKA_CLIENT_SERVICEURL_DEFAULTZONE: http://discovery-service:8761/eureka/
+    depends_on:
+      postgres:
+        condition: service_healthy
+      discovery-service:
+        condition: service_healthy
+      config-service:
+        condition: service_healthy
+
+  attendance-service:
+    build:
+      context: .
+      args:
+        MODULE: attendance-service
+    container_name: portal-attendance-service
+    restart: unless-stopped
+    ports:
+      - '8082:8082'
+    environment:
+      SERVER_PORT: 8082
+      R2DBC_URL: r2dbc:postgresql://postgres:5432/portal_db
+      DB_USER: portal_user
+      DB_PASSWORD: portal_secret
+      EUREKA_CLIENT_SERVICEURL_DEFAULTZONE: http://discovery-service:8761/eureka/
+    depends_on:
+      postgres:
+        condition: service_healthy
+      discovery-service:
+        condition: service_healthy
+      config-service:
+        condition: service_healthy
+
+  schedule-service:
+    build:
+      context: .
+      args:
+        MODULE: schedule-service
+    container_name: portal-schedule-service
+    restart: unless-stopped
+    ports:
+      - '8083:8083'
+    environment:
+      SERVER_PORT: 8083
+      DB_URL: jdbc:postgresql://postgres:5432/portal_db
+      DB_USER: portal_user
+      DB_PASSWORD: portal_secret
+      EUREKA_CLIENT_SERVICEURL_DEFAULTZONE: http://discovery-service:8761/eureka/
+    depends_on:
+      postgres:
+        condition: service_healthy
+      discovery-service:
+        condition: service_healthy
+      config-service:
+        condition: service_healthy
+
+volumes:
+  postgres_data:
