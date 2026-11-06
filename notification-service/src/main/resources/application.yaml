@@ -5,6 +5,11 @@ spring:
   application:
     name: notification-service
 
+  # Config Client is included in this service.  Make the Config Server optional
+  # so the service can still start locally while it is unavailable.
+  config:
+    import: optional:configserver:${CONFIG_SERVICE_URL:http://config-service:8888}
+
   datasource:
     url: ${DB_URL:jdbc:postgresql://localhost:5432/portal_db}
     username: ${DB_USER:portal_user}
