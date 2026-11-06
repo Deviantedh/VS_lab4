@@ -18,7 +18,7 @@ public class LocalDiskFileStorageAdapter implements FileStoragePort {
 
     private final Path storageLocation;
 
-    public LocalDiskFileStorageAdapter(@Value("${file.storage.path:/app/uploads}") String storagePath) {
+    public LocalDiskFileStorageAdapter(@Value("${file.storage.path:/app/uploads}") String storagePath) { //файлы в s3
         this.storageLocation = Paths.get(storagePath).toAbsolutePath().normalize();
         try {
             Files.createDirectories(this.storageLocation);
