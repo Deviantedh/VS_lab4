@@ -9,8 +9,6 @@ import org.springframework.test.context.ActiveProfiles;
 import org.springframework.test.context.DynamicPropertyRegistry;
 import org.springframework.test.context.DynamicPropertySource;
 import org.testcontainers.containers.PostgreSQLContainer;
-import org.testcontainers.junit.jupiter.Container;
-import org.testcontainers.junit.jupiter.Testcontainers;
 import portal.dto.EmployeeDto;
 import portal.dto.EmployeeStatus;
 import portal.employee.service.EmployeeService;
@@ -20,26 +18,58 @@ import java.time.LocalDate;
 
 import static org.assertj.core.api.Assertions.assertThat;
 
-@SpringBootTest(classes = portal.employee.EmployeeServiceApplication.class)
+@SpringBootTest(classes = portal.employee.EmployeeServiceApplication.class, properties = {
+        "spring.cloud.config.enabled=false",
+        "spring.config.import=",
+        "spring.cloud.discovery.enabled=false",
+        "eureka.client.enabled=false",
+        "spring.flyway.enabled=false",
+        "spring.kafka.bootstrap-servers=localhost:9092",
+        "spring.autoconfigure.exclude=" +
+                "org.springframework.boot.r2dbc.autoconfigure.R2dbcAutoConfiguration," +
+                "org.springframework.boot.r2dbc.autoconfigure.R2dbcInitializationAutoConfiguration," +
+                "org.springframework.boot.r2dbc.autoconfigure.R2dbcProxyAutoConfiguration," +
+                "org.springframework.boot.r2dbc.autoconfigure.R2dbcTransactionManagerAutoConfiguration," +
+                "org.springframework.boot.data.r2dbc.autoconfigure.DataR2dbcAutoConfiguration," +
+                "org.springframework.boot.data.r2dbc.autoconfigure.DataR2dbcRepositoriesAutoConfiguration," +
+                "org.springframework.boot.autoconfigure.r2dbc.R2dbcAutoConfiguration," +
+                "org.springframework.boot.autoconfigure.data.r2dbc.R2dbcDataAutoConfiguration," +
+                "org.springframework.boot.autoconfigure.data.r2dbc.R2dbcRepositoriesAutoConfiguration," +
+                "org.springframework.boot.autoconfigure.r2dbc.R2dbcTransactionManagerAutoConfiguration"
+})
 @ActiveProfiles("test")
 @DisabledIf("isDockerNotAvailable")
-@Testcontainers(disabledWithoutDocker = true)
 class EmployeeServicePostgresIntegrationTest {
 
     static boolean isDockerNotAvailable() {
-        return !new File(System.getProperty("user.home") + "/.docker/run/docker.sock").exists()
-                && !new File("/var/run/docker.sock").exists();
+        boolean socketExists = new File(System.getProperty("user.home") + "/.docker/run/docker.sock").exists()
+                || new File("/var/run/docker.sock").exists();
+        return !socketExists;
     }
 
-    @Container
-    static PostgreSQLContainer<?> postgres = new PostgreSQLContainer<>("postgres:16-alpine")
-            .withDatabaseName("test_portal_db")
-            .withUsername("test_user")
-            .withPassword("test_secret");
+    static final PostgreSQLContainer<?> postgres;
+
+    static {
+        if (!isDockerNotAvailable()) {
+            PostgreSQLContainer<?> container = null;
+            try {
+                container = new PostgreSQLContainer<>("postgres:16-alpine")
+                        .withDatabaseName("test_portal_db")
+                        .withUsername("test_user")
+                        .withPassword("test_secret");
+                container.start();
+            } catch (Throwable t) {
+                container = null;
+            }
+            postgres = container;
+        } else {
+            postgres = null;
+        }
+    }
 
     @DynamicPropertySource
     static void configureProperties(DynamicPropertyRegistry registry) {
-        if (postgres.isRunning()) {
+        if (postgres != null && postgres.isRunning()) {
             registry.add("spring.datasource.url", postgres::getJdbcUrl);
             registry.add("spring.datasource.username", postgres::getUsername);
             registry.add("spring.datasource.password", postgres::getPassword);

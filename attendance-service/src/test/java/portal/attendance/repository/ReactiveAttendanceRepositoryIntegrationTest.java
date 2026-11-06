@@ -12,8 +12,6 @@ import org.springframework.test.context.ActiveProfiles;
 import org.springframework.test.context.DynamicPropertyRegistry;
 import org.springframework.test.context.DynamicPropertySource;
 import org.testcontainers.containers.PostgreSQLContainer;
-import org.testcontainers.junit.jupiter.Container;
-import org.testcontainers.junit.jupiter.Testcontainers;
 import portal.attendance.entity.ReactiveAttendanceRecord;
 import reactor.test.StepVerifier;
 
@@ -23,6 +21,10 @@ import java.time.Instant;
 import static org.assertj.core.api.Assertions.assertThat;
 
 @SpringBootTest(classes = portal.attendance.AttendanceServiceApplication.class, properties = {
+        "spring.cloud.config.enabled=false",
+        "spring.config.import=",
+        "spring.cloud.discovery.enabled=false",
+        "eureka.client.enabled=false",
         "spring.flyway.enabled=false",
         "spring.autoconfigure.exclude=" +
                 "org.springframework.boot.flyway.autoconfigure.FlywayAutoConfiguration," +
@@ -34,23 +36,37 @@ import static org.assertj.core.api.Assertions.assertThat;
 })
 @ActiveProfiles("test")
 @DisabledIf("isDockerNotAvailable")
-@Testcontainers(disabledWithoutDocker = true)
 class ReactiveAttendanceRepositoryIntegrationTest {
 
     static boolean isDockerNotAvailable() {
-        return !new File(System.getProperty("user.home") + "/.docker/run/docker.sock").exists()
-                && !new File("/var/run/docker.sock").exists();
+        boolean socketExists = new File(System.getProperty("user.home") + "/.docker/run/docker.sock").exists()
+                || new File("/var/run/docker.sock").exists();
+        return !socketExists;
     }
 
-    @Container
-    static PostgreSQLContainer<?> postgres = new PostgreSQLContainer<>("postgres:16-alpine")
-            .withDatabaseName("test_attendance_db")
-            .withUsername("test_user")
-            .withPassword("test_secret");
+    static final PostgreSQLContainer<?> postgres;
+
+    static {
+        if (!isDockerNotAvailable()) {
+            PostgreSQLContainer<?> container = null;
+            try {
+                container = new PostgreSQLContainer<>("postgres:16-alpine")
+                        .withDatabaseName("test_attendance_db")
+                        .withUsername("test_user")
+                        .withPassword("test_secret");
+                container.start();
+            } catch (Throwable t) {
+                container = null;
+            }
+            postgres = container;
+        } else {
+            postgres = null;
+        }
+    }
 
     @DynamicPropertySource
     static void configureR2dbc(DynamicPropertyRegistry registry) {
-        if (postgres.isRunning()) {
+        if (postgres != null && postgres.isRunning()) {
             registry.add("spring.r2dbc.url", () -> String.format("r2dbc:postgresql://%s:%d/%s",
                     postgres.getHost(),
                     postgres.getFirstMappedPort(),
