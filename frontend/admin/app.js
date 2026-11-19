@@ -132,7 +132,6 @@ async function authFetch(url, options = {}) {
   return response;
 }
 
-// ================= Обработка Ошибок API (RFC 7807) =================
 async function handleApiResponse(response) {
   if (response.ok) {
     if (response.status === 204) return null;
