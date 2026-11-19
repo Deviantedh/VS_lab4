@@ -6,6 +6,9 @@ spring:
     name: gateway-service
 
   cloud:
+    bus:
+      enabled: true
+      destination: springCloudBus
     gateway:
       server:
         webmvc:
@@ -60,38 +63,33 @@ spring:
                 - Path=/v3/api-docs/file-service
               filters:
                 - SetPath=/v3/api-docs
-          trusted-proxies: ".*"
-          x-forwarded-request-headers-filter:
-            enabled: true
-            for-append: false
-            for-enabled: false
-            host-append: false
-            host-enabled: true
-            port-append: false
-            port-enabled: true
-            proto-append: false
-            proto-enabled: true
 
 eureka:
   client:
     service-url:
-      defaultZone: http://localhost:8761/eureka/
+      defaultZone: ${EUREKA_CLIENT_SERVICEURL_DEFAULTZONE:http://localhost:8761/eureka/}
   instance:
     prefer-ip-address: true
 
+management:
+  endpoints:
+    web:
+      exposure:
+        include: health,info,refresh,busrefresh,beans,env
+
 springdoc:
   api-docs:
-    enabled: true
+    path: /v3/api-docs
   swagger-ui:
     path: /swagger-ui.html
     urls:
       - name: Employee Service
         url: /v3/api-docs/employee-service
-      - name: Attendance Service (R2DBC)
+      - name: Attendance Service
         url: /v3/api-docs/attendance-service
-      - name: Schedule Service (WebFlux + JPA)
+      - name: Schedule Service
         url: /v3/api-docs/schedule-service
-      - name: Notification Service (Kafka + Clean Arch)
+      - name: Notification Service
         url: /v3/api-docs/notification-service
-      - name: File Service (Clean Arch)
+      - name: File Service
         url: /v3/api-docs/file-service

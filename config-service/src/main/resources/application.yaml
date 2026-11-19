@@ -10,11 +10,28 @@ spring:
     config:
       server:
         native:
-          search-locations: classpath:/config-repo,file:./config-repo,file:../config-repo
+          search-locations:
+            - classpath:/config-repo/{application}
+            - classpath:/config-repo
+            - file:./config-repo/{application}
+            - file:./config-repo
+            - file:../config-repo/{application}
+            - file:../config-repo
+    bus:
+      enabled: true
+      destination: springCloudBus
+  kafka:
+    bootstrap-servers: ${KAFKA_BOOTSTRAP_SERVERS:localhost:9092,localhost:9094,localhost:9095}
 
 eureka:
   instance:
     prefer-ip-address: true
   client:
     service-url:
-      defaultZone: http://localhost:8761/eureka/
+      defaultZone: ${EUREKA_CLIENT_SERVICEURL_DEFAULTZONE:http://localhost:8761/eureka/}
+
+management:
+  endpoints:
+    web:
+      exposure:
+        include: "*"

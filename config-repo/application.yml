@@ -1,0 +1,12 @@
+spring:
+  kafka:
+    bootstrap-servers: ${KAFKA_BOOTSTRAP_SERVERS:kafka-1:9092,kafka-2:9092,kafka-3:9092}
+  cloud:
+    bus:
+      enabled: true
+      destination: springCloudBus
+management:
+  endpoints:
+    web:
+      exposure:
+        include: health,info,refresh,busrefresh,beans,env

@@ -1,0 +1,6 @@
+file:
+  storage:
+    type: ${FILE_STORAGE_TYPE:local}
+portal:
+  config:
+    message: "File Service Dev Profile Config"

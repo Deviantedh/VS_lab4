@@ -17,7 +17,18 @@ spring:
     open-in-view: false
     show-sql: false
 
+  kafka:
+    bootstrap-servers: ${KAFKA_BOOTSTRAP_SERVERS:localhost:9092,localhost:9094,localhost:9095}
+    producer:
+      key-serializer: org.apache.kafka.common.serialization.StringSerializer
+      value-serializer: org.springframework.kafka.support.serializer.JsonSerializer
+      acks: all
+      retries: 3
+
   cloud:
+    bus:
+      enabled: true
+      destination: springCloudBus
     openfeign:
       circuitbreaker:
         enabled: true
@@ -25,9 +36,15 @@ spring:
 eureka:
   client:
     service-url:
-      defaultZone: http://localhost:8761/eureka/
+      defaultZone: ${EUREKA_CLIENT_SERVICEURL_DEFAULTZONE:http://localhost:8761/eureka/}
   instance:
     prefer-ip-address: true
+
+management:
+  endpoints:
+    web:
+      exposure:
+        include: health,info,refresh,busrefresh,beans,env
 
 resilience4j:
   circuitbreaker:
@@ -48,3 +65,7 @@ springdoc:
     path: /v3/api-docs
   swagger-ui:
     path: /swagger-ui.html
+
+portal:
+  config:
+    message: "Schedule Service Dynamic Config v1.0"
