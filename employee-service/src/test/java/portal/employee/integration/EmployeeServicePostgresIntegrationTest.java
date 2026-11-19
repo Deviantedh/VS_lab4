@@ -2,18 +2,17 @@ package portal.employee.integration;
 
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
-import org.junit.jupiter.api.condition.DisabledIf;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.context.SpringBootTest;
 import org.springframework.test.context.ActiveProfiles;
 import org.springframework.test.context.DynamicPropertyRegistry;
 import org.springframework.test.context.DynamicPropertySource;
+import org.testcontainers.DockerClientFactory;
 import org.testcontainers.containers.PostgreSQLContainer;
 import portal.dto.EmployeeDto;
 import portal.dto.EmployeeStatus;
 import portal.employee.service.EmployeeService;
 
-import java.io.File;
 import java.time.LocalDate;
 
 import static org.assertj.core.api.Assertions.assertThat;
@@ -38,31 +37,19 @@ import static org.assertj.core.api.Assertions.assertThat;
                 "org.springframework.boot.autoconfigure.r2dbc.R2dbcTransactionManagerAutoConfiguration"
 })
 @ActiveProfiles("test")
-@DisabledIf("isDockerNotAvailable")
 class EmployeeServicePostgresIntegrationTest {
 
-    static boolean isDockerNotAvailable() {
-        boolean socketExists = new File(System.getProperty("user.home") + "/.docker/run/docker.sock").exists()
-                || new File("/var/run/docker.sock").exists();
-        return !socketExists;
-    }
-
-    static final PostgreSQLContainer<?> postgres;
+    private static PostgreSQLContainer<?> postgres;
 
     static {
-        if (!isDockerNotAvailable()) {
-            PostgreSQLContainer<?> container = null;
-            try {
-                container = new PostgreSQLContainer<>("postgres:16-alpine")
-                        .withDatabaseName("test_portal_db")
-                        .withUsername("test_user")
-                        .withPassword("test_secret");
-                container.start();
-            } catch (Throwable t) {
-                container = null;
-            }
-            postgres = container;
-        } else {
+        try {
+            DockerClientFactory.instance().client();
+            postgres = new PostgreSQLContainer<>("postgres:16-alpine")
+                    .withDatabaseName("test_portal_db")
+                    .withUsername("test_user")
+                    .withPassword("test_secret");
+            postgres.start();
+        } catch (Throwable ignored) {
             postgres = null;
         }
     }

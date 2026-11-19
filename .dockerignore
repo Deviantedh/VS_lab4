@@ -1,0 +1,4 @@
+*
+!config-repo
+!config-repo/**
+!*/target/*.jar
