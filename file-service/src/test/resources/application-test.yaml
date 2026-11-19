@@ -15,9 +15,13 @@ spring:
     producer:
       key-serializer: org.apache.kafka.common.serialization.StringSerializer
       value-serializer: org.springframework.kafka.support.serializer.JsonSerializer
+  cloud:
+    bus:
+      enabled: false
 
 file:
   storage:
+    type: local
     path: target/test-uploads
 
 eureka:
