@@ -8,8 +8,11 @@ spring:
       enabled: false
     discovery:
       enabled: false
+    bus:
+      enabled: false
   autoconfigure:
     exclude:
+      - org.springframework.cloud.bus.BusAutoConfiguration
       - org.springframework.boot.r2dbc.autoconfigure.R2dbcAutoConfiguration
       - org.springframework.boot.r2dbc.autoconfigure.R2dbcInitializationAutoConfiguration
       - org.springframework.boot.r2dbc.autoconfigure.R2dbcProxyAutoConfiguration

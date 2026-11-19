@@ -6,6 +6,8 @@ import jakarta.validation.Valid;
 import jakarta.validation.constraints.Max;
 import jakarta.validation.constraints.Min;
 import lombok.RequiredArgsConstructor;
+import org.springframework.beans.factory.annotation.Value;
+import org.springframework.cloud.context.config.annotation.RefreshScope;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.PageRequest;
 import org.springframework.data.domain.Sort;
@@ -25,6 +27,7 @@ import portal.employee.service.EmployeeService;
 import java.util.List;
 
 @Validated
+@RefreshScope
 @RestController
 @RequestMapping("/api/employees")
 @RequiredArgsConstructor
@@ -32,6 +35,15 @@ import java.util.List;
 public class EmployeeController {
 
     private final EmployeeService employeeService;
+
+    @Value("${portal.config.message:Employee Service Default Config}")
+    private String configMessage;
+
+    @GetMapping("/config-message")
+    @Operation(summary = "Получить динамическое конфигурационное сообщение (проверка обновления через Kafka Bus)")
+    public ResponseEntity<String> getConfigMessage() {
+        return ResponseEntity.ok(configMessage);
+    }
 
     @GetMapping
     @Operation(summary = "Получить сотрудников с пагинацией (максимум 50 записей)")

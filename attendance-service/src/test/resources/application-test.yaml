@@ -8,12 +8,15 @@ spring:
       enabled: false
     discovery:
       enabled: false
+    bus:
+      enabled: false
   flyway:
     enabled: false
   kafka:
     bootstrap-servers: localhost:9092
   autoconfigure:
     exclude:
+      - org.springframework.cloud.bus.BusAutoConfiguration
       - org.springframework.boot.flyway.autoconfigure.FlywayAutoConfiguration
       - org.springframework.boot.hibernate.autoconfigure.HibernateJpaAutoConfiguration
       - org.springframework.boot.jdbc.autoconfigure.DataSourceAutoConfiguration
