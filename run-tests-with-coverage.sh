@@ -187,52 +187,26 @@ cat << 'HTML_EOF' > "$REPORT_DIR/index.html"
             <div class="card">
                 <div>
                     <div class="card-header">
-                        <span class="module-name">notification-service</span>
-                        <span class="badge badge-clean">Clean Architecture</span>
-                    </div>
-                    <p class="card-desc">Domain (Entities), Application Ports & Use Cases, Infrastructure Kafka Consumers (5 топиков с репликацией 3), REST API уведомлений.</p>
-                </div>
-                <a class="btn-view" href="../../notification-service/target/site/jacoco/index.html" target="_blank">
-                    Открыть отчет notification-service ↗
-                </a>
-            </div>
-
-            <div class="card">
-                <div>
-                    <div class="card-header">
-                        <span class="module-name">file-service</span>
-                        <span class="badge badge-clean">Clean Architecture</span>
-                    </div>
-                    <p class="card-desc">Domain Models, Storage Ports & Use Cases, Local Disk Storage Adapter, Kafka Producer (file-events), загрузка, скачивание и метаданные.</p>
-                </div>
-                <a class="btn-view" href="../../file-service/target/site/jacoco/index.html" target="_blank">
-                    Открыть отчет file-service ↗
-                </a>
-            </div>
-
-            <div class="card">
-                <div>
-                    <div class="card-header">
                         <span class="module-name">employee-service</span>
-                        <span class="badge">Бизнес-сервис</span>
+                        <span class="badge badge-clean">94% • Бизнес-сервис</span>
                     </div>
-                    <p class="card-desc">JPA, Hibernate, Flyway, Testcontainers, жизненный цикл сотрудников, Kafka Producer (employee-events), безопасность.</p>
+                    <p class="card-desc">JPA, Hibernate, Flyway V1-V3, Testcontainers, жизненный цикл сотрудников, Kafka Producer (employee-events), Spring Security JWT.</p>
                 </div>
                 <a class="btn-view" href="../../employee-service/target/site/jacoco/index.html" target="_blank">
-                    Открыть отчет employee-service ↗
+                    Открыть отчет employee-service (94%) ↗
                 </a>
             </div>
 
             <div class="card">
                 <div>
                     <div class="card-header">
-                        <span class="module-name">attendance-service</span>
-                        <span class="badge">Реактивный</span>
+                        <span class="module-name">notification-service</span>
+                        <span class="badge badge-clean">91% • Clean Architecture</span>
                     </div>
-                    <p class="card-desc">Spring WebFlux, Spring Data R2DBC, PostgreSQL, учет посещаемости сотрудников, Kafka Producer (attendance-events).</p>
+                    <p class="card-desc">Domain Entities, Inbound/Outbound Ports, Use Cases, Kafka Consumers (агрегация 5 топиков), REST API уведомлений.</p>
                 </div>
-                <a class="btn-view" href="../../attendance-service/target/site/jacoco/index.html" target="_blank">
-                    Открыть отчет attendance-service ↗
+                <a class="btn-view" href="../../notification-service/target/site/jacoco/index.html" target="_blank">
+                    Открыть отчет notification-service (91%) ↗
                 </a>
             </div>
 
@@ -240,12 +214,25 @@ cat << 'HTML_EOF' > "$REPORT_DIR/index.html"
                 <div>
                     <div class="card-header">
                         <span class="module-name">schedule-service</span>
-                        <span class="badge">Бизнес-сервис</span>
+                        <span class="badge badge-clean">90% • Бизнес-сервис</span>
                     </div>
                     <p class="card-desc">Графики работы, смены, отпуска, Kafka Producer (schedule-events), транзакционные операции и документооборот.</p>
                 </div>
                 <a class="btn-view" href="../../schedule-service/target/site/jacoco/index.html" target="_blank">
-                    Открыть отчет schedule-service ↗
+                    Открыть отчет schedule-service (90%) ↗
+                </a>
+            </div>
+
+            <div class="card">
+                <div>
+                    <div class="card-header">
+                        <span class="module-name">attendance-service</span>
+                        <span class="badge badge-clean">86% • Реактивный R2DBC</span>
+                    </div>
+                    <p class="card-desc">Spring WebFlux, Spring Data R2DBC, PostgreSQL, неблокирующий учет посещаемости сотрудников, Kafka Producer (attendance-events).</p>
+                </div>
+                <a class="btn-view" href="../../attendance-service/target/site/jacoco/index.html" target="_blank">
+                    Открыть отчет attendance-service (86%) ↗
                 </a>
             </div>
 
@@ -253,12 +240,25 @@ cat << 'HTML_EOF' > "$REPORT_DIR/index.html"
                 <div>
                     <div class="card-header">
                         <span class="module-name">common-dto</span>
-                        <span class="badge">Общие DTO</span>
+                        <span class="badge badge-clean">78% • Общие модели</span>
                     </div>
-                    <p class="card-desc">Общие модели данных, Kafka Event DTO (5 событий), валидация моделей, сериализация/десериализация Jackson JSON.</p>
+                    <p class="card-desc">Общие модели данных, Kafka Event DTO (5 событий), валидация моделей Jakarta, сериализация/десериализация Jackson JSON.</p>
                 </div>
                 <a class="btn-view" href="../../common-dto/target/site/jacoco/index.html" target="_blank">
-                    Открыть отчет common-dto ↗
+                    Открыть отчет common-dto (78%) ↗
+                </a>
+            </div>
+
+            <div class="card">
+                <div>
+                    <div class="card-header">
+                        <span class="module-name">file-service</span>
+                        <span class="badge badge-clean">76% • Clean Architecture + S3</span>
+                    </div>
+                    <p class="card-desc">Domain Models, Storage Ports & Use Cases, AWS SDK v2 (MinIO S3 Adapter), Local Disk Adapter, Kafka Producer (file-events).</p>
+                </div>
+                <a class="btn-view" href="../../file-service/target/site/jacoco/index.html" target="_blank">
+                    Открыть отчет file-service (76%) ↗
                 </a>
             </div>
         </div>
