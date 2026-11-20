@@ -24,8 +24,15 @@ import static org.assertj.core.api.Assertions.assertThat;
         "spring.config.import=",
         "spring.cloud.discovery.enabled=false",
         "eureka.client.enabled=false",
+        "spring.cloud.bus.enabled=false",
         "spring.flyway.enabled=false",
         "spring.autoconfigure.exclude=" +
+                "org.springframework.cloud.stream.function.FunctionConfiguration," +
+                "org.springframework.cloud.stream.config.BindingServiceConfiguration," +
+                "org.springframework.cloud.bus.BusAutoConfiguration," +
+                "org.springframework.cloud.bus.BusStreamAutoConfiguration," +
+                "org.springframework.cloud.bus.BusRefreshAutoConfiguration," +
+                "org.springframework.boot.autoconfigure.kafka.KafkaAutoConfiguration," +
                 "org.springframework.boot.flyway.autoconfigure.FlywayAutoConfiguration," +
                 "org.springframework.boot.hibernate.autoconfigure.HibernateJpaAutoConfiguration," +
                 "org.springframework.boot.jdbc.autoconfigure.DataSourceAutoConfiguration," +
@@ -35,6 +42,9 @@ import static org.assertj.core.api.Assertions.assertThat;
 })
 @ActiveProfiles("test")
 class ReactiveAttendanceRepositoryIntegrationTest {
+
+    @org.springframework.test.context.bean.override.mockito.MockitoBean
+    private org.springframework.kafka.core.KafkaTemplate<String, Object> kafkaTemplate;
 
     private static PostgreSQLContainer<?> postgres;
 
