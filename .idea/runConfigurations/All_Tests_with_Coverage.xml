@@ -1,10 +1,11 @@
 <component name="ProjectRunConfigurationManager">
   <configuration default="false" name="All Tests with Coverage" type="JUnit" factoryName="JUnit">
+    <module name="employee-service" />
     <option name="PACKAGE_NAME" value="" />
     <option name="MAIN_CLASS_NAME" value="" />
     <option name="METHOD_NAME" value="" />
     <option name="TEST_OBJECT" value="package" />
-    <option name="VM_PARAMETERS" value="-XX:+EnableDynamicAgentLoading -Dtestcontainers.telemetry.disabled=true -Dspring.cloud.discovery.enabled=false -Deureka.client.enabled=false -Dspring.cloud.config.enabled=false" />
+    <option name="VM_PARAMETERS" value="-XX:+EnableDynamicAgentLoading -Dtestcontainers.telemetry.disabled=true -Dspring.cloud.discovery.enabled=false -Deureka.client.enabled=false -Dspring.cloud.config.enabled=false -Dspring.cloud.bus.enabled=false" />
     <option name="WORKING_DIRECTORY" value="$PROJECT_DIR$" />
     <option name="TEST_SEARCH_SCOPE">
       <value defaultName="wholeProject" />
@@ -48,6 +49,14 @@
       </pattern>
       <pattern>
         <option name="PATTERN" value="portal.gateway.*" />
+        <option name="ENABLED" value="true" />
+      </pattern>
+      <pattern>
+        <option name="PATTERN" value="portal.notification.*" />
+        <option name="ENABLED" value="true" />
+      </pattern>
+      <pattern>
+        <option name="PATTERN" value="portal.file.*" />
         <option name="ENABLED" value="true" />
       </pattern>
     </extension>
