@@ -5,6 +5,12 @@ spring:
     bus:
       enabled: true
       destination: springCloudBus
+
+eureka:
+  client:
+    refresh:
+      enable: false
+
 management:
   endpoints:
     web:
